@@ -8,6 +8,8 @@
     "start": "next start -p ${PORT:-3000}",
     "poll": "tsx --env-file=.env scripts/poll.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
+    "seed:demo": "tsx --env-file=.env scripts/seed.ts --reset",
+    "telegram:webhook": "tsx --env-file=.env scripts/telegram-webhook.ts",
     "db:push": "drizzle-kit push",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts",
