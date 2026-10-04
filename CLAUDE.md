@@ -24,14 +24,20 @@ src/
   channels/telegram.ts  grammY bot + telegram.send()
   router.ts             logs every message, decides if Kevin replies, calls askKevin
   lib/llm.ts            model id for the Neon AI Gateway ("neon/<id>")
-  lib/voice.ts          speech-to-text
-  lib/instacart.ts lib/agentmail.ts   integration clients (stubs)
+  lib/voice.ts          speech-to-text (OpenRouter, STT_MODEL)
+  lib/instacart.ts lib/agentmail.ts   integration clients
   lib/dashboard.ts      dashboardCtx(): first household + "actor" cookie member
-  jobs/scheduler.ts     60 s tick: due reminders -> telegram.send
+  jobs/scheduler.ts     60 s tick: due reminders, weekly report, upkeep nudge, AgentMail inbox poll -> telegram.send
   instrumentation.ts    starts the scheduler once
+  components/           ui.tsx (PageHead, Empty, NoHousehold), nav-links, ask-kevin panel, tz-offset
   app/                  dashboard pages + api/{telegram,chat,agentmail}
-scripts/poll.ts         local dev: Telegram long polling
-scripts/seed.ts         demo house "Apt 4B"
+    page.tsx            Home = the Kevin Report
+    money/ cart/ cart/checkout/ chores/ reminders/ inbox/ upkeep/ members/
+scripts/poll.ts         local dev: Telegram long polling (deletes the webhook)
+scripts/telegram-webhook.ts   setWebhook/deleteWebhook + getWebhookInfo (npm run telegram:webhook [-- --delete])
+scripts/seed.ts         bare demo house "Apt 4B"; `npm run seed:demo` loads three weeks of history into it
+scripts/kevin-smoke.ts  demo utterances through the real agent (npm run kevin:smoke)
+docs/DEMO.md            presenter walkthrough
 ```
 
 ## Ownership
@@ -53,23 +59,29 @@ scripts/seed.ts         demo house "Apt 4B"
 ## Library notes (versions in package-lock)
 
 - **Mastra v1:** `createTool({ id, description, inputSchema, execute: async (input, context) => ... })`. The first arg is the parsed input, not `{ context }`. Agent needs `id`. Memory call: `agent.generate(text, { memory: { thread, resource } })`.
-- **LLM:** Neon AI Gateway through Mastra's model router: `model = "neon/<id>"` in `lib/llm.ts`, which reads `NEON_AI_GATEWAY_BASE_URL` + `NEON_AI_GATEWAY_TOKEN`. Use ids from the branch's `/v1/models`. Speech-to-text uses separate `STT_*` vars (no Whisper on the gateway).
-- **grammY:** webhook via `webhookCallback(bot, "std/http")` in `app/api/telegram`. Locally use `npm run poll` (it deletes the webhook; re-set it after).
+- **LLM:** Neon AI Gateway through Mastra's model router: `model = "neon/<id>"` in `lib/llm.ts`, which reads `NEON_AI_GATEWAY_BASE_URL` + `NEON_AI_GATEWAY_TOKEN`. Use ids from the branch's `/v1/models`.
+- **Voice:** no Whisper on the gateway. `lib/voice.ts` sends the Telegram .ogg to OpenRouter (`OPENROUTER_API_KEY`, `STT_MODEL`, an audio-capable chat model) as an `input_audio` chat part and uses the text reply as the transcript. The router then treats it like a typed message (voice notes always get a reply).
+- **grammY:** webhook via `webhookCallback(bot, "std/http")` in `app/api/telegram`. Locally use `npm run poll` (it deletes the webhook; re-set it with `npm run telegram:webhook` after).
 - **Next 16:** Mastra and pg are in `serverExternalPackages`.
 
 ## Commands
 
 ```
 npm install
-cp .env.example .env          # fill DATABASE_URL, NEON_AI_GATEWAY_*, LLM_MODEL, TELEGRAM_*
+cp .env.example .env          # fill DATABASE_URL, NEON_AI_GATEWAY_BASE_URL/TOKEN, LLM_MODEL, OPENROUTER_API_KEY, STT_MODEL,
+                              #      TELEGRAM_BOT_TOKEN/USERNAME/WEBHOOK_SECRET, AGENTMAIL_API_KEY/INBOX, APP_URL
 npm run db:push               # create tables on Neon
-TELEGRAM_CHAT_ID=-100... npm run seed
-npm run poll                  # Kevin in your group, locally
+TELEGRAM_CHAT_ID=-100... npm run seed        # bare house, or:
+TELEGRAM_CHAT_ID=-100... npm run seed:demo   # Apt 4B with three weeks of history (the demo house)
+npm run poll                  # Kevin in your group, locally (deletes the webhook)
 npm run dev                   # dashboard at localhost:3000 (scheduler runs here too; DISABLE_SCHEDULER=1 to skip)
-npm run typecheck && npm test
+npm run typecheck && npm test # tsc + unit tests (no .env)
+npm run test:tools            # every tool against the dev DB in a throwaway household, no LLM
+npm run kevin:smoke           # demo utterances through the real agent (writes rows to the first household)
+npm run telegram:webhook      # setWebhook -> $APP_URL/api/telegram, prints getWebhookInfo (-- --delete to remove)
 ```
 
-Deploy: `fly launch --no-deploy` (once), `fly secrets set ...` for every var in `.env.example`, `fly deploy`, then set the Telegram webhook (command at the top of `app/api/telegram/route.ts`). Deploy after every priority.
+Deploy: `fly launch --no-deploy` (once), `fly secrets set ...` for every var in `.env.example`, `fly deploy --ha=false` (one Machine; the scheduler is in-process), then `npm run telegram:webhook`. Deploy after every priority. Presenter notes: `docs/DEMO.md`.
 
 ## Before you commit
 
