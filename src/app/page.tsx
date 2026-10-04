@@ -17,18 +17,18 @@ export default async function Home() {
       <PageHead title="The Kevin Report" quip="This is my house. I have to defend it." />
       <div className="grid">
         <section className="card">
-          <h2>💸 Who pays whom</h2>
+          <h2>💸 Who pays whom · Wet Bandits watchlist</h2>
           {r.settlePlan.length ? (
             <ul className="list">
               {r.settlePlan.map((t, i) => (
                 <li key={i}><b>{t.fromName}</b><span className="muted">pays</span><b>{t.toName}</b><span className="spacer" /><span className="stat" style={{ fontSize: 18 }}>{dollars(t.cents)}</span></li>
               ))}
             </ul>
-          ) : <Empty title="All square.">Nobody owes anybody. Keep it that way.</Empty>}
+          ) : <Empty title="All square. No filthy animals today.">Nobody owes anybody. Keep the change.</Empty>}
         </section>
 
         <section className="card">
-          <h2>🧹 Chores</h2>
+          <h2>🧹 Chores · You guys give up?</h2>
           {r.chores.length ? (
             <ul className="list">
               {r.chores.map((c) => (
@@ -41,11 +41,11 @@ export default async function Home() {
                 </li>
               ))}
             </ul>
-          ) : <Empty title="No chores yet.">Somebody has to take out the trash.</Empty>}
+          ) : <Empty title="No chores yet.">Somebody has to take out the trash. Harry and Marv aren&apos;t going to do it.</Empty>}
         </section>
 
         <section className="card">
-          <h2>🚨 Hall of Shame</h2>
+          <h2>🕷️ Hall of Shame · Buzz&apos;s tarantula award</h2>
           {r.shame.length ? (
             <ul className="list">
               {r.shame.map((s, i) => (
@@ -55,23 +55,23 @@ export default async function Home() {
                 </li>
               ))}
             </ul>
-          ) : <Empty title="Nobody to shame.">Yet.</Empty>}
+          ) : <Empty title="Nobody to shame.">Yet. The tarantula is patient.</Empty>}
         </section>
 
         <section className="card">
-          <h2>⏰ Coming up</h2>
+          <h2>⏰ Coming up · KEVIN!!!</h2>
           {r.upcoming.length ? (
             <ul className="list">
               {r.upcoming.map((u) => (
                 <li key={u.id}><span>{u.text}</span><span className="spacer" /><small>{day(u.dueAt)}</small></li>
               ))}
             </ul>
-          ) : <Empty title="Nothing scheduled.">Enjoy the quiet.</Empty>}
+          ) : <Empty title="Nothing scheduled.">Enjoy the quiet. Jump on the bed, eat the ice cream.</Empty>}
         </section>
 
         {r.upkeep.length > 0 && (
           <section className="card">
-            <h2>🔧 Upkeep due</h2>
+            <h2>🪣 Trap check · upkeep due</h2>
             <ul className="list">
               {r.upkeep.map((m) => (
                 <li key={m.id}><span>{m.item}</span><span className="spacer" /><small>{m.nextDue ? day(m.nextDue) : "now"}</small></li>

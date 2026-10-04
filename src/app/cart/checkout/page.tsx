@@ -50,13 +50,13 @@ export default async function CheckoutPage() {
 
   return (
     <main>
-      <PageHead title="Kevin's Market" quip="Credit card? You got it.">
-        <span className="pill gold">Simulated Instacart — nothing is really bought</span>
+      <PageHead title="Kevin's Market" quip="Bless this highly nutritious microwavable macaroni and cheese dinner.">
+        <span className="pill gold">Kevin&apos;s Market — simulated · nothing is really bought</span>
       </PageHead>
 
       {items.length === 0 ? (
         <div className="card">
-          <Empty title="The cart is empty.">
+          <Empty title="The cart is empty. Not even macaroni.">
             Nothing to check out. <Link href="/cart">Back to the cart</Link> and add something first.
           </Empty>
         </div>
@@ -64,7 +64,7 @@ export default async function CheckoutPage() {
         <div className="grid">
           <section className="card" style={{ gridColumn: "1 / -1" }}>
             <h2>
-              Your order
+              🛒 Your order
               <span className="pill">{items.length} item{items.length === 1 ? "" : "s"}</span>
             </h2>
             <table className="table">
@@ -92,12 +92,12 @@ export default async function CheckoutPage() {
               </tbody>
             </table>
             <p className="muted" style={{ margin: "10px 0 0" }}>
-              Estimated prices from Kevin&apos;s catalog. Delivery: never. Tip: whoever does the dishes.
+              Estimated prices from Kevin&apos;s catalog. Delivery: never. Tip: whoever does the dishes. Credit card? You got it.
             </p>
           </section>
 
           <section className="card">
-            <h2>Place order</h2>
+            <h2>💸 Place order · credit card? You got it.</h2>
             <form action={placeOrder} className="stack">
               <div className="form-grid">
                 <div className="field">
@@ -121,6 +121,7 @@ export default async function CheckoutPage() {
                 <button style={{ fontSize: 17, padding: "12px 22px" }}>Place order (simulated) · {dollars(total)}</button>
               </div>
               <small className="muted">
+                <b>Pretend-swipe. Nobody gets charged, nobody gets a pizza, everybody gets a line on the money page.</b>{" "}
                 No card is charged and no store is contacted. Placing the order logs one {dollars(total)} grocery expense paid by{" "}
                 {actor?.name ?? "you"}: everyone pays for their own items, shared items split evenly across the house. Then it clears the cart.
               </small>
@@ -128,7 +129,7 @@ export default async function CheckoutPage() {
           </section>
 
           <section className="card">
-            <h2>Who owes what</h2>
+            <h2>👀 Who owes what · the split</h2>
             <ul className="list">
               {preview.map((row) => {
                 const n = ownCount.get(row.memberId) ?? 0;

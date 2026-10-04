@@ -52,7 +52,7 @@ export default async function UpkeepPage() {
       <PageHead title="Upkeep" quip="Kevin's battle plan for the house." />
       <div className="grid">
         <section className="card">
-          <h2>Battle plan</h2>
+          <h2>🪣 Battle plan · paint cans, icicles, the attic</h2>
           {items.length ? (
             <>
               <table className="table">
@@ -86,28 +86,28 @@ export default async function UpkeepPage() {
               </table>
               {items.length < 3 && (
                 <form action={seedDefaults} className="row" style={{ marginTop: 16 }}>
-                  <span className="muted">Thin plan. Want the classics too?</span>
+                  <span className="muted">Thin plan. The Wet Bandits would walk right in.</span>
                   <span className="spacer" />
-                  <button className="btn-ghost">Add the usual suspects</button>
+                  <button className="btn-ghost">Load the paint cans 🪣 (add the usual suspects)</button>
                 </form>
               )}
             </>
           ) : (
-            <Empty title="No battle plan yet.">
+            <Empty title="No battle plan yet. The house is wide open.">
               Filters, smoke alarms and other recurring upkeep go here.
               <form action={seedDefaults} style={{ marginTop: 16 }}>
-                <button>Add the usual suspects</button>
+                <button>Load the paint cans 🪣 (add the usual suspects)</button>
               </form>
             </Empty>
           )}
         </section>
 
         <section className="card">
-          <h2>Add item</h2>
+          <h2>🧼 Set a trap · add an upkeep item</h2>
           <form action={add} className="stack">
             <div className="field">
               <label htmlFor="item">What needs doing</label>
-              <input id="item" name="item" placeholder="Replace HVAC filter" required />
+              <input id="item" name="item" placeholder="Replace HVAC filter, test the smoke alarms, check the attic" required />
             </div>
             <div className="form-grid">
               <div className="field">
@@ -116,6 +116,7 @@ export default async function UpkeepPage() {
               </div>
               <div><button>Add to the plan</button></div>
             </div>
+            <small className="muted">Kevin nudges the group chat when a trap needs resetting. Mark it Done and the clock restarts.</small>
           </form>
         </section>
       </div>

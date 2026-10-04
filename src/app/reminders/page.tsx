@@ -42,10 +42,10 @@ export default async function RemindersPage() {
   const [upcoming, people] = await Promise.all([reminders.listReminders(ctx), members.listMembers(ctx)]);
   return (
     <main>
-      <PageHead title="Reminders" quip="KEVIN!" />
+      <PageHead title="Reminders" quip="KEVIN!!!" />
       <div className="grid">
         <section className="card">
-          <h2>⏰ Coming up</h2>
+          <h2>⏰ Coming up · things Kevin will yell about</h2>
           {upcoming.length ? (
             <ul className="list">
               {upcoming.map((r) => (
@@ -65,16 +65,16 @@ export default async function RemindersPage() {
               ))}
             </ul>
           ) : (
-            <Empty title="Nothing to forget yet.">Rent and other reminders will live here.</Empty>
+            <Empty title="Nothing to forget yet.">Rent and other reminders will live here. Kevin has a Talkboy and he&apos;s not afraid to use it.</Empty>
           )}
         </section>
 
         <section className="card">
-          <h2>Set a reminder</h2>
+          <h2>😤 Yell KEVIN at a time of your choosing · set a reminder</h2>
           <form action={add} className="stack">
             <div className="field">
               <label htmlFor="text">What</label>
-              <input id="text" name="text" placeholder="Take the bins out" required />
+              <input id="text" name="text" placeholder="Take the bins out, pay rent, feed the tarantula" required />
             </div>
             <div className="form-grid">
               <div className="field">
@@ -96,11 +96,12 @@ export default async function RemindersPage() {
             </div>
             <label className="row" htmlFor="monthly" style={{ cursor: "pointer" }}>
               <input id="monthly" name="monthly" type="checkbox" value="1" />
-              Repeat monthly
+              Repeat monthly (rent-style)
             </label>
             <div>
               <button>Set it</button>
             </div>
+            <small className="muted">Kevin pings the group chat when it&apos;s time. Loudly.</small>
           </form>
         </section>
       </div>
