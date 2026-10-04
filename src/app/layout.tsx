@@ -16,6 +16,18 @@ export const dynamic = "force-dynamic";
 const display = Fraunces({ subsets: ["latin"], variable: "--font-display" });
 const body = Inter({ subsets: ["latin"], variable: "--font-body" });
 
+// One-liner under the wordmark. Picked by the current minute on the server so SSR and hydration agree.
+const TAGLINES = [
+  "Nobody cheats Kevin.",
+  "This is my house. I have to defend it.",
+  "Keep the change, ya filthy animal.",
+  "KEVIN!!!",
+  "You guys give up? Or are you thirsty for more?",
+  "I made my family disappear.",
+  "Buzz, your girlfriend… woof.",
+] as const;
+const tagline = () => TAGLINES[new Date().getMinutes() % TAGLINES.length];
+
 // The dashboard acts as this member (default payer / doer / adder), like the sender in chat.
 async function setActor(form: FormData) {
   "use server";
@@ -38,7 +50,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <div className="plaid" />
         <div className="shell">
           <header className="topbar">
-            <Link href="/" className="brand"><b>🏠 Kevin</b><small>Nobody cheats Kevin.</small></Link>
+            <Link href="/" className="brand" title="Kevin. Just Kevin.">
+              <b>Kevin</b>
+              <small className="tagline">{tagline()}</small>
+            </Link>
             <NavLinks unread={unread} />
             {people.length > 0 && (
               <form action={setActor} className="actor">

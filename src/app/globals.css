@@ -14,6 +14,7 @@
   --gold: #c9973b;
   --gold-soft: #f7ecd6;
   --shadow: 0 1px 2px rgb(31 26 23 / 0.06), 0 4px 16px rgb(31 26 23 / 0.05);
+  --shadow-lift: 0 2px 4px rgb(31 26 23 / 0.08), 0 12px 28px rgb(31 26 23 / 0.10);
   --radius: 12px;
   color-scheme: light;
 }
@@ -34,6 +35,7 @@
     --gold: #e0b45e;
     --gold-soft: #2e2615;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.35), 0 12px 28px rgb(0 0 0 / 0.35);
     color-scheme: dark;
   }
 }
@@ -67,17 +69,31 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 /* Layout */
 .shell { max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; }
 .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 16px 0; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
-.brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; }
-.brand b { font-family: var(--font-display), Georgia, serif; font-size: 22px; color: var(--red); }
-.brand small { font-style: italic; }
+/* Wordmark: "Kevin" over a rotating one-liner (picked per minute on the server, see layout.tsx). */
+.brand { display: flex; flex-direction: column; align-items: flex-start; gap: 0; text-decoration: none; line-height: 1.1; }
+.brand b { display: inline-block; font-family: var(--font-display), Georgia, serif; font-size: 24px; color: var(--red); letter-spacing: -0.01em; transform-origin: left bottom; transition: transform 180ms cubic-bezier(.34,1.56,.64,1); }
+.brand:hover b { transform: rotate(-4deg) scale(1.04); }
+.brand small { font-style: italic; font-size: 12px; white-space: nowrap; }
+.tagline { animation: k-fade-in 400ms ease-out backwards; }
 .nav { display: flex; flex-wrap: wrap; gap: 2px; }
-.nav a { text-decoration: none; padding: 6px 10px; border-radius: 8px; color: var(--muted); font-weight: 500; }
+.nav a { position: relative; text-decoration: none; padding: 6px 10px; border-radius: 8px; color: var(--muted); font-weight: 500; transition: color 150ms ease, background 150ms ease; }
+.nav a::after {
+  content: ""; position: absolute; left: 10px; bottom: 3px; height: 2px; width: 0; border-radius: 2px;
+  background: currentColor; opacity: 0.9; transition: width 220ms cubic-bezier(.2,.8,.2,1);
+}
 .nav a:hover { background: var(--surface-2); color: var(--ink); }
+.nav a:hover::after { width: 14px; }
 .nav a[aria-current="page"] { background: var(--red-soft); color: var(--red); }
+.nav a[aria-current="page"]::after { width: calc(100% - 20px); }
 .actor { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 
 .page-head { margin-bottom: 24px; }
-.quip { margin: 6px 0 0; color: var(--muted); font-style: italic; }
+.page-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.head-badge { font-size: 12px; letter-spacing: 0.02em; text-transform: uppercase; animation-delay: 300ms; }
+.head-emoji { font-size: 44px; line-height: 1; display: inline-block; transform-origin: 50% 80%; animation: k-stat-pop 500ms cubic-bezier(.34,1.56,.64,1) 200ms backwards; cursor: default; user-select: none; }
+.head-emoji:hover { animation: k-wiggle 600ms ease-in-out; }
+/* The quip is a movie subtitle: a little bigger, italic, a thin rule down the left. */
+.quip { margin: 8px 0 0; padding-left: 10px; border-left: 2px solid var(--gold); color: var(--muted); font-style: italic; font-size: 16px; animation: k-fade-in 400ms ease-out 120ms backwards; }
 .quip::before { content: "“"; }
 .quip::after { content: "”"; }
 
@@ -87,34 +103,59 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 .spacer { flex: 1; }
 
 /* Cards */
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+  /* Staggered fade-up on load (fill backwards: the resting state is the normal one, so hover can still transform). */
+  animation: k-fade-up 250ms ease-out backwards;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.card:nth-child(2) { animation-delay: 60ms; }
+.card:nth-child(3) { animation-delay: 120ms; }
+.card:nth-child(4) { animation-delay: 180ms; }
+.card:nth-child(5) { animation-delay: 240ms; }
+.card:nth-child(6) { animation-delay: 300ms; }
+.card:nth-child(7) { animation-delay: 360ms; }
+.card:nth-child(n+8) { animation-delay: 420ms; }
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
 .card > h2:first-child { display: flex; align-items: center; gap: 8px; }
 
-.stat { font-family: var(--font-display), Georgia, serif; font-size: 28px; font-weight: 700; }
+.stat { display: inline-block; font-family: var(--font-display), Georgia, serif; font-size: 28px; font-weight: 700; transform-origin: left center; animation: k-stat-pop 420ms cubic-bezier(.34,1.56,.64,1) 200ms backwards; }
 .pos { color: var(--green); }
 .neg { color: var(--red); }
 
 /* Lists and tables */
 .list { list-style: none; margin: 0; padding: 0; }
-.list > li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.list > li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); transition: background 150ms ease, box-shadow 150ms ease; animation: k-fade-in 250ms ease-out backwards; }
 .list > li:last-child { border-bottom: 0; }
+/* Row tint bleeds 8px past the text on each side via box-shadow, so nothing moves. */
+.list > li:hover { background: var(--surface-2); box-shadow: -8px 0 0 var(--surface-2), 8px 0 0 var(--surface-2); }
+.list > li:nth-child(2), .table tbody tr:nth-child(2) { animation-delay: 40ms; }
+.list > li:nth-child(3), .table tbody tr:nth-child(3) { animation-delay: 80ms; }
+.list > li:nth-child(4), .table tbody tr:nth-child(4) { animation-delay: 120ms; }
+.list > li:nth-child(5), .table tbody tr:nth-child(5) { animation-delay: 160ms; }
+.list > li:nth-child(n+6), .table tbody tr:nth-child(n+6) { animation-delay: 200ms; }
 .table { width: 100%; border-collapse: collapse; }
 .table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--line); }
-.table td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.table td { padding: 10px 8px; border-bottom: 1px solid var(--line); transition: background 150ms ease; }
+.table tbody tr { animation: k-fade-in 250ms ease-out backwards; }
+.table tbody tr:hover td { background: var(--surface-2); }
 .table tr:last-child td { border-bottom: 0; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 
-.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); animation: k-pop 220ms ease-out backwards; }
 .pill.red { background: var(--red-soft); color: var(--red); }
 .pill.green { background: var(--green-soft); color: var(--green); }
 .pill.gold { background: var(--gold-soft); color: var(--gold); }
+/* Balance pills pop in, then do one little wiggle so the eye lands on who owes whom. */
+.pill.red, .pill.green { animation: k-pop 220ms ease-out backwards, k-wiggle 500ms ease-in-out 450ms; }
 
 /* Forms */
 input, select, textarea {
   font: inherit; color: var(--ink); background: var(--surface);
   border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0;
 }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-color: var(--gold); }
+input, select, textarea { outline: 2px solid transparent; outline-offset: 1px; transition: outline-color 150ms ease, border-color 150ms ease, box-shadow 180ms ease; }
+input:focus, select:focus, textarea:focus { outline-color: var(--gold); border-color: var(--gold); box-shadow: 0 0 0 4px var(--gold-soft); }
 label { font-size: 13px; font-weight: 600; color: var(--muted); }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end; }
@@ -122,16 +163,30 @@ label { font-size: 13px; font-weight: 600; color: var(--muted); }
 button, .btn {
   font: inherit; font-weight: 600; cursor: pointer; border: 1px solid transparent;
   background: var(--red); color: var(--red-ink); padding: 7px 14px; border-radius: 8px; text-decoration: none;
+  transition: transform 120ms ease, filter 150ms ease, background 150ms ease, box-shadow 150ms ease;
 }
 button:hover, .btn:hover { filter: brightness(1.08); }
+/* Press: a quick 0.97 squish. Also the only "submitting" cue we give server-action forms (CSS only, no pending JS). */
+button:active, .btn:active { transform: scale(0.97); filter: brightness(0.96); }
+button:focus-visible, .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gold-soft), 0 0 0 5px var(--gold); }
+button:disabled { cursor: default; transform: none; }
 .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
 .btn-ghost:hover { background: var(--surface-2); filter: none; }
 .btn-danger { background: transparent; color: var(--red); border-color: transparent; }
 .btn-danger:hover { background: var(--red-soft); filter: none; }
 
-/* Empty states get a line from Kevin. */
+/* Empty states get a line from Kevin. Hover the title and it shrugs. */
 .empty { text-align: center; padding: 28px 16px; color: var(--muted); }
-.empty b { display: block; font-family: var(--font-display), Georgia, serif; font-size: 17px; color: var(--ink); margin-bottom: 4px; }
+.empty b { display: block; font-family: var(--font-display), Georgia, serif; font-size: 17px; color: var(--ink); margin-bottom: 4px; transform-origin: 50% 100%; }
+.empty:hover b { animation: k-shrug 550ms ease-in-out; }
+
+/* Route states: not-found and loading. */
+.scream { display: inline-block; font-size: 72px; line-height: 1; margin-bottom: 8px; transform-origin: 50% 90%; animation: k-scream 4s ease-in-out 600ms infinite; }
+.loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 64px 16px; color: var(--muted); font-style: italic; animation: k-fade-in 300ms ease-out 150ms backwards; }
+.loading-traps { display: inline-flex; gap: 4px; font-style: normal; font-size: 20px; line-height: 1; }
+.loading-traps > span { display: inline-block; animation: k-trap 900ms ease-in-out infinite; }
+.loading-traps > span:nth-child(2) { animation-delay: 150ms; }
+.loading-traps > span:nth-child(3) { animation-delay: 300ms; }
 
 @media (max-width: 640px) {
   h1 { font-size: 26px; }
@@ -142,6 +197,7 @@ button:hover, .btn:hover { filter: brightness(1.08); }
 .inbox { display: grid; gap: 16px; grid-template-columns: minmax(260px, 340px) 1fr; align-items: start; }
 .threads .list > li { padding: 0; }
 .thread { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 8px; margin: 0 -8px; border-radius: 8px; text-decoration: none; min-width: 0; }
+.thread { transition: background 150ms ease; }
 .thread:hover { background: var(--surface-2); }
 .thread.active { background: var(--red-soft); }
 .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -159,8 +215,12 @@ textarea { resize: vertical; }
   padding: 10px 18px; border-radius: 999px;
   background: var(--red); color: var(--red-ink); border-color: transparent;
   box-shadow: var(--shadow), 0 8px 24px rgb(0 0 0 / 0.12);
+  /* A little bob every ~8s so you notice Kevin's there. Stops while the panel is open. */
+  animation: k-bob 8s ease-in-out 3s infinite;
 }
-.ak-launcher[aria-expanded="true"] { filter: brightness(0.95); }
+.ak-launcher:hover { box-shadow: var(--shadow-lift); }
+.ak-launcher:active { animation: none; transform: scale(0.97); }
+.ak-launcher[aria-expanded="true"] { filter: brightness(0.95); animation: none; }
 .ak-panel {
   position: fixed; right: 20px; bottom: 72px; z-index: 50;
   width: 360px; max-width: calc(100vw - 40px); max-height: 70vh;
@@ -168,19 +228,23 @@ textarea { resize: vertical; }
   background: var(--surface); color: var(--ink); border: 1px solid var(--line);
   border-radius: var(--radius); box-shadow: var(--shadow), 0 12px 32px rgb(0 0 0 / 0.14);
   overflow: hidden;
+  transform-origin: bottom right;
+  animation: k-slide-up 220ms cubic-bezier(.2,.8,.2,1);
 }
 .ak-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .ak-head > div { display: flex; flex-direction: column; line-height: 1.2; }
 .ak-title { font-family: var(--font-display), Georgia, serif; font-size: 19px; font-weight: 600; color: var(--red); }
 .ak-close { padding: 2px 10px; font-size: 18px; line-height: 1.2; }
 .ak-log { flex: 1; min-height: 160px; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); }
-.ak-msg { display: flex; flex-direction: column; gap: 6px; max-width: 85%; }
+.ak-msg { display: flex; flex-direction: column; gap: 6px; max-width: 85%; animation: k-fade-up 180ms ease-out; }
 .ak-msg.me { align-self: flex-end; align-items: flex-end; }
 .ak-msg.kevin { align-self: flex-start; align-items: flex-start; }
 .ak-bubble { padding: 8px 12px; border-radius: var(--radius); white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid transparent; }
 .ak-msg.me .ak-bubble { background: var(--red-soft); border-bottom-right-radius: 4px; }
 .ak-msg.kevin .ak-bubble { background: var(--surface-2); border-color: var(--line); border-bottom-left-radius: 4px; }
-.ak-thinking { color: var(--muted); font-style: italic; }
+.ak-thinking { color: var(--muted); font-style: italic; animation: k-breathe 1.4s ease-in-out infinite; }
+/* Animated ellipsis: the dots grow one at a time after "thinking". */
+.ak-thinking::after { content: ""; display: inline-block; width: 1.2em; text-align: left; animation: k-dots 1.2s steps(1, end) infinite; }
 .ak-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .ak-buttons .btn { padding: 5px 10px; font-size: 13px; }
 .ak-detail { font-size: 12px; }
@@ -191,4 +255,33 @@ textarea { resize: vertical; }
   .ak-launcher { right: 12px; bottom: 12px; }
   .ak-panel { left: 0; right: 0; bottom: 0; width: auto; max-width: none; max-height: 85vh; border-radius: var(--radius) var(--radius) 0 0; }
   .ak-launcher[aria-expanded="true"] { display: none; }
+}
+
+/* Motion. All decorative: opacity/transform only, nothing reflows, nothing blocks input.
+   Every keyframe and transition is switched off (or made instant) under prefers-reduced-motion below. */
+@keyframes k-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes k-fade-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@keyframes k-slide-up { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes k-pop { 0% { opacity: 0; transform: scale(0.9); } 70% { opacity: 1; transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes k-stat-pop { 0% { opacity: 0; transform: scale(0.8); } 60% { opacity: 1; transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes k-wiggle { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-5deg); } 40% { transform: rotate(5deg); } 60% { transform: rotate(-3deg); } 80% { transform: rotate(3deg); } }
+@keyframes k-shrug { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-3px) rotate(-2deg); } 60% { transform: translateY(-3px) rotate(2deg); } }
+@keyframes k-scream { 0%, 86%, 100% { transform: rotate(0) scale(1); } 88% { transform: rotate(-6deg) scale(1.06); } 90% { transform: rotate(6deg) scale(1.06); } 92% { transform: rotate(-5deg) scale(1.06); } 94% { transform: rotate(5deg) scale(1.04); } 96% { transform: rotate(-2deg) scale(1.02); } }
+@keyframes k-trap { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes k-bob { 0%, 100% { transform: translateY(0); } 3% { transform: translateY(-7px); } 6% { transform: translateY(0); } 9% { transform: translateY(-3px); } 12% { transform: translateY(0); } }
+@keyframes k-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes k-dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+/* The plaid ribbon drifts one full repeat (180px = lcm of its 18px and 60px periods) every 12s, so the loop is seamless. */
+@keyframes k-shimmer { from { background-position: 0 0, 0 0; } to { background-position: 180px 0, 180px 0; } }
+.plaid { animation: k-shimmer 12s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .plaid, .ak-launcher, .scream, .loading-traps > span, .ak-thinking, .ak-thinking::after { animation: none !important; }
+  .card:hover, .brand:hover b, button:active, .btn:active { transform: none; }
 }
