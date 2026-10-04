@@ -1,5 +1,5 @@
 app = "kevin"
-primary_region = "sjc"
+primary_region = "iad" # next to Neon us-east-2
 
 [http_service]
   internal_port = 3000
