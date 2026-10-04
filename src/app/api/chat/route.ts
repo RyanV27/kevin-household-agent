@@ -11,6 +11,11 @@ export async function POST(req: Request) {
   const ctx = await dashboardCtx();
   if (!ctx) return Response.json({ error: "no household yet" }, { status: 400 });
   const me = (await listMembers(ctx)).find((m) => m.id === ctx.actorId);
-  const out = await askKevin(ctx, `[${me?.name ?? "Someone"}] ${text}`);
-  return Response.json(out);
+  try {
+    const out = await askKevin(ctx, `[${me?.name ?? "Someone"}] ${text}`);
+    return Response.json(out);
+  } catch (err) {
+    console.error("[api/chat]", err);
+    return Response.json({ error: err instanceof Error ? err.message : String(err) }, { status: 502 });
+  }
 }

@@ -1,15 +1,124 @@
-// P8 · Ryan. Follow app/members/page.tsx: read via services, write via server actions + revalidatePath.
+// P8 · Upkeep: the recurring battle plan. Reads via services/upkeep, writes via server actions + revalidatePath.
+import { revalidatePath } from "next/cache";
 import { dashboardCtx } from "@/lib/dashboard";
+import { upkeep } from "@/services";
+import type { MaintenanceItem } from "@/services/upkeep";
+import { Empty, NoHousehold, PageHead } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
+async function add(form: FormData) {
+  "use server";
+  const ctx = await dashboardCtx();
+  if (!ctx) return;
+  const item = String(form.get("item") ?? "").trim();
+  const everyDays = Number(form.get("everyDays") ?? 90);
+  if (!item) return;
+  await upkeep.addMaintenance(ctx, { item, everyDays: Number.isFinite(everyDays) && everyDays > 0 ? everyDays : 90 });
+  revalidatePath("/", "layout");
+}
+
+async function done(form: FormData) {
+  "use server";
+  const ctx = await dashboardCtx();
+  if (!ctx) return;
+  await upkeep.markDone(ctx, { item: String(form.get("item") ?? "") });
+  revalidatePath("/", "layout");
+}
+
+async function seedDefaults() {
+  "use server";
+  const ctx = await dashboardCtx();
+  if (!ctx) return;
+  await upkeep.addDefaults(ctx);
+  revalidatePath("/", "layout");
+}
+
+const day = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+const STATUS: Record<MaintenanceItem["status"], { label: string; cls: string }> = {
+  overdue: { label: "Overdue", cls: "pill red" },
+  "due-soon": { label: "Due soon", cls: "pill gold" },
+  ok: { label: "OK", cls: "pill green" },
+};
+
 export default async function UpkeepPage() {
   const ctx = await dashboardCtx();
-  if (!ctx) return <p>No household yet.</p>;
+  if (!ctx) return <NoHousehold />;
+  const items = await upkeep.listMaintenance(ctx);
+
   return (
     <main>
-      <h1>Upkeep</h1>
-      <p>TODO(P8): see plans/kevin-module-prompts.md</p>
+      <PageHead title="Upkeep" quip="Kevin's battle plan for the house." />
+      <div className="grid">
+        <section className="card">
+          <h2>Battle plan</h2>
+          {items.length ? (
+            <>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th className="num">Every</th>
+                    <th>Last done</th>
+                    <th>Next due</th>
+                    <th>Status</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((m) => (
+                    <tr key={m.id}>
+                      <td>{m.item}</td>
+                      <td className="num">{m.everyDays} days</td>
+                      <td>{m.lastDone ? day(m.lastDone) : <span className="muted">never</span>}</td>
+                      <td>{m.nextDue ? day(m.nextDue) : "now"}</td>
+                      <td><span className={STATUS[m.status].cls}>{STATUS[m.status].label}</span></td>
+                      <td className="num">
+                        <form action={done}>
+                          <input type="hidden" name="item" value={m.item} />
+                          <button className="btn-ghost">Done</button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {items.length < 3 && (
+                <form action={seedDefaults} className="row" style={{ marginTop: 16 }}>
+                  <span className="muted">Thin plan. Want the classics too?</span>
+                  <span className="spacer" />
+                  <button className="btn-ghost">Add the usual suspects</button>
+                </form>
+              )}
+            </>
+          ) : (
+            <Empty title="No battle plan yet.">
+              Filters, smoke alarms and other recurring upkeep go here.
+              <form action={seedDefaults} style={{ marginTop: 16 }}>
+                <button>Add the usual suspects</button>
+              </form>
+            </Empty>
+          )}
+        </section>
+
+        <section className="card">
+          <h2>Add item</h2>
+          <form action={add} className="stack">
+            <div className="field">
+              <label htmlFor="item">What needs doing</label>
+              <input id="item" name="item" placeholder="Replace HVAC filter" required />
+            </div>
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="everyDays">Every (days)</label>
+                <input id="everyDays" name="everyDays" type="number" min="1" step="1" defaultValue={90} required />
+              </div>
+              <div><button>Add to the plan</button></div>
+            </div>
+          </form>
+        </section>
+      </div>
     </main>
   );
 }

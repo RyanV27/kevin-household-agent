@@ -18,7 +18,7 @@ export function makeTools(ctx: Ctx, outbox: ToolOutbox) {
     ...cartTools(ctx, outbox),
     ...choreTools(ctx),
     ...reminderTools(ctx),
-    ...leasingTools(ctx),
+    ...leasingTools(ctx, outbox),
     ...upkeepTools(ctx),
   };
 }
