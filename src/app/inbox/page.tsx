@@ -57,8 +57,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   if (!house?.inboxAddress || !house.leasingEmail) {
     return (
-      <main>
-        <PageHead title="Inbox" quip="Merry Christmas, ya filthy animal." />
+      <main data-accent="candy">
+        <PageHead title="Inbox" quip="Merry Christmas, ya filthy animal." emoji="📬" />
         <div className="card">
           <Empty title="Kevin needs a mailbox.">
             No mailbox, no mail. Set Kevin&apos;s inbox and the leasing office email in <Link href="/members">Roommates → Fort McCallister settings</Link>.
@@ -69,9 +69,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   }
 
   return (
-    <main>
-      <PageHead title="Inbox" quip="Merry Christmas, ya filthy animal.">
-        <small>{house.inboxAddress} ⇄ {house.leasingEmail}</small>
+    <main data-accent="candy">
+      <PageHead title="Inbox" quip="Merry Christmas, ya filthy animal." emoji="📬">
+        <small className="clip" style={{ maxWidth: "100%" }}>{house.inboxAddress} ⇄ {house.leasingEmail}</small>
       </PageHead>
 
       <div className="inbox">

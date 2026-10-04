@@ -53,8 +53,8 @@ export default async function CartPage() {
   const groupNames = Object.keys(groups);
 
   return (
-    <main>
-      <PageHead title="Grocery cart" quip="I'm eating junk and watching rubbish.">
+    <main data-accent="gold">
+      <PageHead title="Grocery cart" quip="I'm eating junk and watching rubbish." emoji="🍕">
         {all.length > 0 && (
           <Link href="/cart/checkout" className="btn">Checkout at Kevin&apos;s Market</Link>
         )}

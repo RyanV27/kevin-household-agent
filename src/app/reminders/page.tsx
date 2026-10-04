@@ -41,8 +41,8 @@ export default async function RemindersPage() {
   if (!ctx) return <NoHousehold />;
   const [upcoming, people] = await Promise.all([reminders.listReminders(ctx), members.listMembers(ctx)]);
   return (
-    <main>
-      <PageHead title="Reminders" quip="KEVIN!!!" />
+    <main data-accent="ice">
+      <PageHead title="Reminders" quip="KEVIN!!!" emoji="⏰" />
       <div className="grid">
         <section className="card">
           <h2>⏰ Coming up · things Kevin will yell about</h2>

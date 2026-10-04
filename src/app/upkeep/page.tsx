@@ -37,7 +37,7 @@ async function seedDefaults() {
 const day = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 const STATUS: Record<MaintenanceItem["status"], { label: string; cls: string }> = {
-  overdue: { label: "Overdue", cls: "pill red" },
+  overdue: { label: "Overdue", cls: "pill red overdue" },
   "due-soon": { label: "Due soon", cls: "pill gold" },
   ok: { label: "OK", cls: "pill green" },
 };
@@ -48,42 +48,44 @@ export default async function UpkeepPage() {
   const items = await upkeep.listMaintenance(ctx);
 
   return (
-    <main>
-      <PageHead title="Upkeep" quip="Kevin's battle plan for the house." />
+    <main data-accent="green">
+      <PageHead title="Upkeep" quip="Kevin's battle plan for the house." emoji="🪣" />
       <div className="grid">
-        <section className="card">
+        <section className="card card-wide">
           <h2>🪣 Battle plan · paint cans, icicles, the attic</h2>
           {items.length ? (
             <>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th className="num">Every</th>
-                    <th>Last done</th>
-                    <th>Next due</th>
-                    <th>Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((m) => (
-                    <tr key={m.id}>
-                      <td>{m.item}</td>
-                      <td className="num">{m.everyDays} days</td>
-                      <td>{m.lastDone ? day(m.lastDone) : <span className="muted">never</span>}</td>
-                      <td>{m.nextDue ? day(m.nextDue) : "now"}</td>
-                      <td><span className={STATUS[m.status].cls}>{STATUS[m.status].label}</span></td>
-                      <td className="num">
-                        <form action={done}>
-                          <input type="hidden" name="item" value={m.item} />
-                          <button className="btn-ghost">Done</button>
-                        </form>
-                      </td>
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th className="num">Every</th>
+                      <th>Last done</th>
+                      <th>Next due</th>
+                      <th>Status</th>
+                      <th />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {items.map((m) => (
+                      <tr key={m.id}>
+                        <td className="wrap">{m.item}</td>
+                        <td className="num">{m.everyDays} days</td>
+                        <td className="nowrap">{m.lastDone ? day(m.lastDone) : <span className="muted">never</span>}</td>
+                        <td className="nowrap">{m.nextDue ? day(m.nextDue) : "now"}</td>
+                        <td><span className={STATUS[m.status].cls}>{STATUS[m.status].label}</span></td>
+                        <td className="num">
+                          <form action={done}>
+                            <input type="hidden" name="item" value={m.item} />
+                            <button className="btn-ghost">Done</button>
+                          </form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {items.length < 3 && (
                 <form action={seedDefaults} className="row" style={{ marginTop: 16 }}>
                   <span className="muted">Thin plan. The Wet Bandits would walk right in.</span>

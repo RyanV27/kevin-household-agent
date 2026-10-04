@@ -47,10 +47,10 @@ export default async function ChoresPage() {
   const overdue = board.filter((c) => c.overdue).length;
 
   return (
-    <main>
-      <PageHead title="Chores" quip="You guys give up? Or are you thirsty for more?">
+    <main data-accent="red">
+      <PageHead title="Chores" quip="You guys give up? Or are you thirsty for more?" emoji="🧹">
         {board.length > 0 && (
-          <span className={`pill ${overdue ? "red" : "green"}`}>{overdue ? `${overdue} overdue 😤` : "All on track ✨"}</span>
+          <span className={`pill ${overdue ? "red overdue" : "green"}`}>{overdue ? `${overdue} overdue 😤` : "All on track ✨"}</span>
         )}
       </PageHead>
 
@@ -58,47 +58,49 @@ export default async function ChoresPage() {
         <section className="card">
           <h2>🧹 Chore board · the chart</h2>
           {board.length ? (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Chore</th>
-                  <th>Every</th>
-                  <th>Last done</th>
-                  <th>Whose turn</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {board.map((c) => (
-                  <tr key={c.choreId}>
-                    <td><b>{c.name}</b></td>
-                    <td className="muted">{c.everyDays}d</td>
-                    <td>
-                      {c.lastDoneAt ? (
-                        <>
-                          {c.lastDoneBy} <small>· {ago(c.lastDoneAt)}</small>
-                        </>
-                      ) : (
-                        <span className="muted">never</span>
-                      )}
-                    </td>
-                    <td>{c.whoseTurn ?? <span className="muted">—</span>}</td>
-                    <td>
-                      <span className={`pill ${c.overdue ? "red" : "green"}`}>{c.overdue ? "Overdue" : "On track"}</span>
-                    </td>
-                    <td className="num">
-                      <form action={didIt} className="row" style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}>
-                        <input type="hidden" name="chore" value={c.name} />
-                        <input type="hidden" name="id" value={c.choreId} />
-                        <button>I did it</button>
-                        <button formAction={remove} className="btn-danger" aria-label={`Remove ${c.name}`}>×</button>
-                      </form>
-                    </td>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Chore</th>
+                    <th>Every</th>
+                    <th>Last done</th>
+                    <th>Whose turn</th>
+                    <th>Status</th>
+                    <th />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {board.map((c) => (
+                    <tr key={c.choreId}>
+                      <td className="wrap"><b>{c.name}</b></td>
+                      <td className="muted nowrap">{c.everyDays}d</td>
+                      <td className="wrap">
+                        {c.lastDoneAt ? (
+                          <>
+                            {c.lastDoneBy} <small>· {ago(c.lastDoneAt)}</small>
+                          </>
+                        ) : (
+                          <span className="muted">never</span>
+                        )}
+                      </td>
+                      <td className="wrap">{c.whoseTurn ?? <span className="muted">—</span>}</td>
+                      <td>
+                        <span className={`pill ${c.overdue ? "red overdue" : "green"}`}>{c.overdue ? "Overdue" : "On track"}</span>
+                      </td>
+                      <td className="num">
+                        <form action={didIt} className="row" style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}>
+                          <input type="hidden" name="chore" value={c.name} />
+                          <input type="hidden" name="id" value={c.choreId} />
+                          <button>I did it</button>
+                          <button formAction={remove} className="btn-danger" aria-label={`Remove ${c.name}`}>×</button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <Empty title="No chore chart yet.">Somebody has to take out the trash. The Wet Bandits aren&apos;t going to do it.</Empty>
           )}
@@ -110,7 +112,7 @@ export default async function ChoresPage() {
             {shame.length ? (
               <ul className="list">
                 {shame.map((s, i) => (
-                  <li key={s.memberId}>
+                  <li key={s.memberId} className={i === 0 ? "wanted" : undefined}>
                     <span style={{ width: 24, textAlign: "center" }}>{i === 0 ? "🕷️" : `${i + 1}.`}</span>
                     <b>{s.name}</b>
                     <span className="spacer" />

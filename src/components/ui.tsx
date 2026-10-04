@@ -38,9 +38,10 @@ export function PageHead({
   );
 }
 
-export function Empty({ title, children }: { title: string; children?: ReactNode }) {
+/** Empty state. `className="socks"` adds a little sock row under the text (the "all square" states use it). */
+export function Empty({ title, className, children }: { title: string; className?: string; children?: ReactNode }) {
   return (
-    <div className="empty">
+    <div className={className ? `empty ${className}` : "empty"}>
       <b>{title}</b>
       {children}
     </div>

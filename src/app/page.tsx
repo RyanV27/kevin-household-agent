@@ -13,8 +13,8 @@ export default async function Home() {
   if (!ctx) return <NoHousehold />;
   const r = await kevinReport(ctx);
   return (
-    <main>
-      <PageHead title="The Kevin Report" quip="This is my house. I have to defend it." />
+    <main data-accent="red">
+      <PageHead title="The Kevin Report" quip="This is my house. I have to defend it." emoji={r.chores.some((c) => c.overdue) ? "😱" : "😜"} />
       <div className="grid">
         <section className="card">
           <h2>💸 Who pays whom · Wet Bandits watchlist</h2>
@@ -24,7 +24,7 @@ export default async function Home() {
                 <li key={i}><b>{t.fromName}</b><span className="muted">pays</span><b>{t.toName}</b><span className="spacer" /><span className="stat" style={{ fontSize: 18 }}>{dollars(t.cents)}</span></li>
               ))}
             </ul>
-          ) : <Empty title="All square. No filthy animals today.">Nobody owes anybody. Keep the change.</Empty>}
+          ) : <Empty title="All square. No filthy animals today." className="socks">Nobody owes anybody. Keep the change.</Empty>}
         </section>
 
         <section className="card">
@@ -37,7 +37,7 @@ export default async function Home() {
                   <small className="muted">every {c.everyDays}d</small>
                   <span className="spacer" />
                   {c.whoseTurn && <small>{c.whoseTurn}&apos;s turn</small>}
-                  <span className={`pill ${c.overdue ? "red" : "green"}`}>{c.overdue ? "Overdue" : "On track"}</span>
+                  <span className={`pill ${c.overdue ? "red overdue" : "green"}`}>{c.overdue ? "Overdue" : "On track"}</span>
                 </li>
               ))}
             </ul>
@@ -49,7 +49,7 @@ export default async function Home() {
           {r.shame.length ? (
             <ul className="list">
               {r.shame.map((s, i) => (
-                <li key={s.memberId}>
+                <li key={s.memberId} className={i === 0 ? "wanted" : undefined}>
                   <span>{i === 0 ? "🕷️" : "·"}</span><b>{s.name}</b><span className="spacer" />
                   <small>{s.choresThisWeek} this week · {s.daysSinceLastChore == null ? "never" : `${s.daysSinceLastChore}d ago`}</small>
                 </li>

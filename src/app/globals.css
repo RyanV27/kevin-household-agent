@@ -13,11 +13,33 @@
   --green-soft: #e2efe6;
   --gold: #c9973b;
   --gold-soft: #f7ecd6;
+  --gold-text: #8a6420;          /* gold that passes AA as small text (the raw gold is for fills and threads) */
+  --green-ink: #ffffff;
+  --gold-ink: #1f1a17;
+  /* Second-pass accents: icicle blue and candy-cane pink. Text-safe values; --ice-bright is the decorative one. */
+  --ice: #266d90;
+  --ice-soft: #e3f1f8;
+  --ice-ink: #ffffff;
+  --ice-bright: #6fb3d2;
+  --candy: #b8304f;
+  --candy-soft: #fce6ec;
+  --candy-ink: #ffffff;
   --shadow: 0 1px 2px rgb(31 26 23 / 0.06), 0 4px 16px rgb(31 26 23 / 0.05);
   --shadow-lift: 0 2px 4px rgb(31 26 23 / 0.08), 0 12px 28px rgb(31 26 23 / 0.10);
   --radius: 12px;
   color-scheme: light;
+  /* Per-module accent. Pages set data-accent on <main> (and the nav on itself); no attribute = house red. */
+  --accent: var(--red);
+  --accent-soft: var(--red-soft);
+  --accent-text: var(--red);
+  --accent-ink: var(--red-ink);
 }
+
+[data-accent="red"]   { --accent: var(--red);   --accent-soft: var(--red-soft);   --accent-text: var(--red);       --accent-ink: var(--red-ink); }
+[data-accent="green"] { --accent: var(--green); --accent-soft: var(--green-soft); --accent-text: var(--green);     --accent-ink: var(--green-ink); }
+[data-accent="gold"]  { --accent: var(--gold);  --accent-soft: var(--gold-soft);  --accent-text: var(--gold-text); --accent-ink: var(--gold-ink); }
+[data-accent="ice"]   { --accent: var(--ice);   --accent-soft: var(--ice-soft);   --accent-text: var(--ice);       --accent-ink: var(--ice-ink); }
+[data-accent="candy"] { --accent: var(--candy); --accent-soft: var(--candy-soft); --accent-text: var(--candy);     --accent-ink: var(--candy-ink); }
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -34,6 +56,16 @@
     --green-soft: #18291f;
     --gold: #e0b45e;
     --gold-soft: #2e2615;
+    --gold-text: #e0b45e;
+    --green-ink: #0c1f14;
+    --gold-ink: #1f1a17;
+    --ice: #8fd0ea;
+    --ice-soft: #16303a;
+    --ice-ink: #0b1a21;
+    --ice-bright: #8fd0ea;
+    --candy: #f08aa0;
+    --candy-soft: #3a1a24;
+    --candy-ink: #220b12;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.35), 0 12px 28px rgb(0 0 0 / 0.35);
     color-scheme: dark;
@@ -56,7 +88,7 @@ body {
   height: 8px;
   background:
     repeating-linear-gradient(90deg, transparent 0 14px, rgb(255 255 255 / 0.18) 14px 18px),
-    repeating-linear-gradient(90deg, var(--red) 0 28px, var(--green) 28px 40px, var(--red) 40px 56px, var(--gold) 56px 60px);
+    repeating-linear-gradient(90deg, var(--red) 0 27px, var(--ice-bright) 27px 29px, var(--green) 29px 40px, var(--red) 40px 56px, var(--gold) 56px 60px);
 }
 
 h1, h2, h3 { font-family: var(--font-display), Georgia, serif; line-height: 1.2; margin: 0; }
@@ -83,28 +115,39 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 }
 .nav a:hover { background: var(--surface-2); color: var(--ink); }
 .nav a:hover::after { width: 14px; }
-.nav a[aria-current="page"] { background: var(--red-soft); color: var(--red); }
+.nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); }
 .nav a[aria-current="page"]::after { width: calc(100% - 20px); }
+/* The active tab wears its emoji (data-emoji on the link); the others stay plain so the row reads as a row. */
+.nav a[aria-current="page"]::before { content: attr(data-emoji) " "; }
 .actor { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 
 .page-head { margin-bottom: 24px; }
+.page-head > div { min-width: 0; }
 .page-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+/* A short accent-to-gold bar under the title, like a crayon underline. */
+.page-head h1 { overflow-wrap: anywhere; }
+.page-head h1::after { content: ""; display: block; width: 56px; height: 4px; margin-top: 6px; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--gold)); }
 .head-badge { font-size: 12px; letter-spacing: 0.02em; text-transform: uppercase; animation-delay: 300ms; }
-.head-emoji { font-size: 44px; line-height: 1; display: inline-block; transform-origin: 50% 80%; animation: k-stat-pop 500ms cubic-bezier(.34,1.56,.64,1) 200ms backwards; cursor: default; user-select: none; }
+/* Kevin's sticker: pops in, then breathes slowly; wiggles when poked. */
+.head-emoji { font-size: 44px; line-height: 1; display: inline-block; transform-origin: 50% 80%; animation: k-stat-pop 500ms cubic-bezier(.34,1.56,.64,1) 200ms backwards, k-idle 4s ease-in-out 1.2s infinite; cursor: default; user-select: none; filter: drop-shadow(0 2px 0 var(--accent-soft)); }
 .head-emoji:hover { animation: k-wiggle 600ms ease-in-out; }
-/* The quip is a movie subtitle: a little bigger, italic, a thin rule down the left. */
-.quip { margin: 8px 0 0; padding-left: 10px; border-left: 2px solid var(--gold); color: var(--muted); font-style: italic; font-size: 16px; animation: k-fade-in 400ms ease-out 120ms backwards; }
+/* The quip is a movie subtitle: a little bigger, italic, a thin rule down the left in the page's accent. */
+.quip { margin: 8px 0 0; padding-left: 10px; border-left: 2px solid var(--accent); color: var(--muted); font-style: italic; font-size: 16px; animation: k-fade-in 400ms ease-out 120ms backwards; }
 .quip::before { content: "“"; }
 .quip::after { content: "”"; }
 
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+/* Grid and flex children default to min-width:auto, which lets a wide table push its card past the column. */
+.grid > *, .stack > * { min-width: 0; }
+.card-wide { grid-column: 1 / -1; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .spacer { flex: 1; }
 
 /* Cards */
 .card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+  min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
   /* Staggered fade-up on load (fill backwards: the resting state is the normal one, so hover can still transform). */
   animation: k-fade-up 250ms ease-out backwards;
   transition: transform 150ms ease, box-shadow 150ms ease;
@@ -117,16 +160,33 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 .card:nth-child(7) { animation-delay: 360ms; }
 .card:nth-child(n+8) { animation-delay: 420ms; }
 .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
-.card > h2:first-child { display: flex; align-items: center; gap: 8px; }
+/* Card headings sit on a soft accent strip that fades out to the right, with a crayon stroke down the left. */
+.card > h2:first-child {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere;
+  margin: -4px 0 14px; padding: 6px 10px; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0;
+  background: linear-gradient(90deg, var(--accent-soft), transparent 85%);
+}
 
-.stat { display: inline-block; font-family: var(--font-display), Georgia, serif; font-size: 28px; font-weight: 700; transform-origin: left center; animation: k-stat-pop 420ms cubic-bezier(.34,1.56,.64,1) 200ms backwards; }
+.stat { display: inline-block; font-family: var(--font-display), Georgia, serif; font-size: 28px; font-weight: 700; color: var(--accent-text); white-space: nowrap; transform-origin: left center; animation: k-stat-pop 420ms cubic-bezier(.34,1.56,.64,1) 200ms backwards; }
 .pos { color: var(--green); }
 .neg { color: var(--red); }
 
 /* Lists and tables */
 .list { list-style: none; margin: 0; padding: 0; }
-.list > li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); transition: background 150ms ease, box-shadow 150ms ease; animation: k-fade-in 250ms ease-out backwards; }
+.list > li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); transition: background 150ms ease, box-shadow 150ms ease; animation: k-fade-in 250ms ease-out backwards; }
 .list > li:last-child { border-bottom: 0; }
+/* Long names and subjects wrap inside the row instead of pushing past the card; amounts and dates never break. */
+.list > li > b, .list > li > span:not(.spacer):not(.pill):not(.stat):not(.num), .list > li > div { min-width: 0; overflow-wrap: anywhere; }
+.list > li > small, .list > li > .num { white-space: nowrap; }
+/* Hall of Shame #1: a faint WANTED stamp behind the name. Outlined text, candy pink, low opacity, never in the way. */
+.list > li.wanted { position: relative; background: linear-gradient(90deg, var(--candy-soft), transparent 70%); box-shadow: -8px 0 0 var(--candy-soft); }
+.list > li.wanted > * { position: relative; z-index: 1; }
+.list > li.wanted::before {
+  content: "WANTED"; position: absolute; z-index: 0; left: 28px; top: 50%; pointer-events: none;
+  transform: translateY(-50%) rotate(-7deg); transform-origin: center;
+  font-family: var(--font-display), Georgia, serif; font-weight: 900; font-size: 30px; letter-spacing: 0.22em; line-height: 1;
+  color: transparent; -webkit-text-stroke: 1.5px var(--candy); opacity: 0.22;
+}
 /* Row tint bleeds 8px past the text on each side via box-shadow, so nothing moves. */
 .list > li:hover { background: var(--surface-2); box-shadow: -8px 0 0 var(--surface-2), 8px 0 0 var(--surface-2); }
 .list > li:nth-child(2), .table tbody tr:nth-child(2) { animation-delay: 40ms; }
@@ -134,20 +194,31 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 .list > li:nth-child(4), .table tbody tr:nth-child(4) { animation-delay: 120ms; }
 .list > li:nth-child(5), .table tbody tr:nth-child(5) { animation-delay: 160ms; }
 .list > li:nth-child(n+6), .table tbody tr:nth-child(n+6) { animation-delay: 200ms; }
-.table { width: 100%; border-collapse: collapse; }
-.table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--line); }
-.table td { padding: 10px 8px; border-bottom: 1px solid var(--line); transition: background 150ms ease; }
+/* Tables scroll inside their card when they must (the wrapper), but the cell rules below mean they rarely must:
+   dates, amounts, pills and buttons never wrap; descriptions and names wrap anywhere. */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+.table { width: 100%; max-width: 100%; border-collapse: collapse; table-layout: auto; }
+.table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.table td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; transition: background 150ms ease; }
+.table td.num, .table td.nowrap, .table td .pill, .table td form { white-space: nowrap; }
+.table td.wrap { overflow-wrap: anywhere; word-break: normal; }
+.table td.wrap small, .table td small { white-space: nowrap; }
 .table tbody tr { animation: k-fade-in 250ms ease-out backwards; }
 .table tbody tr:hover td { background: var(--surface-2); }
 .table tr:last-child td { border-bottom: 0; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 
-.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); animation: k-pop 220ms ease-out backwards; }
+/* Pills: default takes the page accent; the colour variants are explicit. */
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); white-space: nowrap; animation: k-pop 220ms ease-out backwards; }
 .pill.red { background: var(--red-soft); color: var(--red); }
 .pill.green { background: var(--green-soft); color: var(--green); }
-.pill.gold { background: var(--gold-soft); color: var(--gold); }
+.pill.gold { background: var(--gold-soft); color: var(--gold-text); }
+.pill.ice { background: var(--ice-soft); color: var(--ice); }
+.pill.candy { background: var(--candy-soft); color: var(--candy); }
 /* Balance pills pop in, then do one little wiggle so the eye lands on who owes whom. */
 .pill.red, .pill.green { animation: k-pop 220ms ease-out backwards, k-wiggle 500ms ease-in-out 450ms; }
+/* Overdue pills pulse twice (box-shadow ring, no reflow) and then sit still. */
+.pill.overdue { animation: k-pop 220ms ease-out backwards, k-pulse 1.1s ease-out 600ms 2; }
 
 /* Forms */
 input, select, textarea {
@@ -162,7 +233,9 @@ label { font-size: 13px; font-weight: 600; color: var(--muted); }
 
 button, .btn {
   font: inherit; font-weight: 600; cursor: pointer; border: 1px solid transparent;
-  background: var(--red); color: var(--red-ink); padding: 7px 14px; border-radius: 8px; text-decoration: none;
+  background: var(--accent); color: var(--accent-ink); padding: 7px 14px; border-radius: 8px; text-decoration: none;
+  /* Accent fading to a slightly darker accent; the plain colour above is the fallback where color-mix is missing. */
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 84%, #000));
   transition: transform 120ms ease, filter 150ms ease, background 150ms ease, box-shadow 150ms ease;
 }
 button:hover, .btn:hover { filter: brightness(1.08); }
@@ -179,11 +252,13 @@ button:disabled { cursor: default; transform: none; }
 .empty { text-align: center; padding: 28px 16px; color: var(--muted); }
 .empty b { display: block; font-family: var(--font-display), Georgia, serif; font-size: 17px; color: var(--ink); margin-bottom: 4px; transform-origin: 50% 100%; }
 .empty:hover b { animation: k-shrug 550ms ease-in-out; }
+/* "All square": a little row of socks on the line, swaying. */
+.empty.socks::after { content: "🧦 🧦 🧦"; display: block; margin-top: 10px; font-size: 18px; letter-spacing: 4px; line-height: 1; transform-origin: 50% 0; animation: k-sway 3s ease-in-out 800ms infinite; }
 
 /* Route states: not-found and loading. */
-.scream { display: inline-block; font-size: 72px; line-height: 1; margin-bottom: 8px; transform-origin: 50% 90%; animation: k-scream 4s ease-in-out 600ms infinite; }
-.loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 64px 16px; color: var(--muted); font-style: italic; animation: k-fade-in 300ms ease-out 150ms backwards; }
-.loading-traps { display: inline-flex; gap: 4px; font-style: normal; font-size: 20px; line-height: 1; }
+.scream { display: inline-block; font-size: 72px; line-height: 1; margin-bottom: 8px; padding: 10px; border-radius: 50%; background: radial-gradient(circle, var(--candy-soft) 0 55%, transparent 72%); transform-origin: 50% 90%; animation: k-scream 4s ease-in-out 600ms infinite; }
+.loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 64px 16px; color: var(--ice); font-style: italic; animation: k-fade-in 300ms ease-out 150ms backwards; }
+.loading-traps { display: inline-flex; gap: 4px; padding: 6px 10px; border-radius: 999px; background: var(--ice-soft); font-style: normal; font-size: 20px; line-height: 1; }
 .loading-traps > span { display: inline-block; animation: k-trap 900ms ease-in-out infinite; }
 .loading-traps > span:nth-child(2) { animation-delay: 150ms; }
 .loading-traps > span:nth-child(3) { animation-delay: 300ms; }
@@ -191,11 +266,17 @@ button:disabled { cursor: default; transform: none; }
 @media (max-width: 640px) {
   h1 { font-size: 26px; }
   .actor { margin-left: 0; }
+  .card { padding: 16px; }
+  .card > h2:first-child { margin-top: -2px; }
+  .table th { padding: 6px; }
+  .table td { padding: 8px 6px; font-size: 14px; }
+  .head-emoji { font-size: 36px; }
 }
 
 /* Inbox */
-.inbox { display: grid; gap: 16px; grid-template-columns: minmax(260px, 340px) 1fr; align-items: start; }
-.threads .list > li { padding: 0; }
+.inbox { display: grid; gap: 16px; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); align-items: start; }
+.inbox > * { min-width: 0; }
+.threads .list > li { padding: 0; flex-wrap: nowrap; }
 .thread { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 8px; margin: 0 -8px; border-radius: 8px; text-decoration: none; min-width: 0; }
 .thread { transition: background 150ms ease; }
 .thread:hover { background: var(--surface-2); }
@@ -204,7 +285,8 @@ button:disabled { cursor: default; transform: none; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex: none; }
 .msg { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; background: var(--surface-2); }
 .msg.sent { background: var(--green-soft); border-color: transparent; }
-.msg p { margin: 6px 0 0; white-space: pre-wrap; }
+.msg p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg .row > b { min-width: 0; overflow-wrap: anywhere; }
 .badge { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: var(--red); color: var(--red-ink); font-size: 11px; line-height: 18px; text-align: center; }
 textarea { resize: vertical; }
 @media (max-width: 760px) { .inbox { grid-template-columns: 1fr; } }
@@ -270,6 +352,10 @@ textarea { resize: vertical; }
 @keyframes k-trap { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes k-bob { 0%, 100% { transform: translateY(0); } 3% { transform: translateY(-7px); } 6% { transform: translateY(0); } 9% { transform: translateY(-3px); } 12% { transform: translateY(0); } }
 @keyframes k-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+/* Idle breathing for the page sticker, a sway for the socks, and the overdue ring. All transform/box-shadow. */
+@keyframes k-idle { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.06) rotate(-2deg); } }
+@keyframes k-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes k-pulse { 0% { box-shadow: 0 0 0 0 var(--red-soft); transform: scale(1); } 40% { box-shadow: 0 0 0 6px var(--red-soft); transform: scale(1.05); } 100% { box-shadow: 0 0 0 0 transparent; transform: scale(1); } }
 @keyframes k-dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
 /* The plaid ribbon drifts one full repeat (180px = lcm of its 18px and 60px periods) every 12s, so the loop is seamless. */
 @keyframes k-shimmer { from { background-position: 0 0, 0 0; } to { background-position: 180px 0, 180px 0; } }
@@ -282,6 +368,7 @@ textarea { resize: vertical; }
     animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
   }
-  .plaid, .ak-launcher, .scream, .loading-traps > span, .ak-thinking, .ak-thinking::after { animation: none !important; }
+  .plaid, .ak-launcher, .scream, .loading-traps > span, .ak-thinking, .ak-thinking::after,
+  .head-emoji, .pill.overdue, .empty.socks::after { animation: none !important; }
   .card:hover, .brand:hover b, button:active, .btn:active { transform: none; }
 }

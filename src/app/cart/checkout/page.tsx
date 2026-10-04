@@ -49,8 +49,8 @@ export default async function CheckoutPage() {
   );
 
   return (
-    <main>
-      <PageHead title="Kevin's Market" quip="Bless this highly nutritious microwavable macaroni and cheese dinner.">
+    <main data-accent="gold">
+      <PageHead title="Kevin's Market" quip="Bless this highly nutritious microwavable macaroni and cheese dinner." emoji="🍕">
         <span className="pill gold">Kevin&apos;s Market — simulated · nothing is really bought</span>
       </PageHead>
 
@@ -67,30 +67,32 @@ export default async function CheckoutPage() {
               🛒 Your order
               <span className="pill">{items.length} item{items.length === 1 ? "" : "s"}</span>
             </h2>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Qty</th>
-                  <th>For</th>
-                  <th className="num">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((i) => (
-                  <tr key={i.id}>
-                    <td><b>{i.name}</b></td>
-                    <td className="muted">{i.qty}</td>
-                    <td>{i.shared ? <span className="pill green">Shared</span> : i.addedByName}</td>
-                    <td className="num">{i.estCents != null ? dollars(i.estCents) : "—"}</td>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Qty</th>
+                    <th>For</th>
+                    <th className="num">Price</th>
                   </tr>
-                ))}
-                <tr>
-                  <td colSpan={3}><b>Total</b></td>
-                  <td className="num"><span className="stat" style={{ fontSize: 20 }}>{dollars(total)}</span></td>
-                </tr>
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((i) => (
+                    <tr key={i.id}>
+                      <td className="wrap"><b>{i.name}</b></td>
+                      <td className="muted wrap">{i.qty}</td>
+                      <td className="wrap">{i.shared ? <span className="pill green">Shared</span> : i.addedByName}</td>
+                      <td className="num">{i.estCents != null ? dollars(i.estCents) : "—"}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td colSpan={3}><b>Total</b></td>
+                    <td className="num"><span className="stat" style={{ fontSize: 20 }}>{dollars(total)}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <p className="muted" style={{ margin: "10px 0 0" }}>
               Estimated prices from Kevin&apos;s catalog. Delivery: never. Tip: whoever does the dishes. Credit card? You got it.
             </p>
