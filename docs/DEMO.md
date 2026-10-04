@@ -21,7 +21,9 @@ Also on every page: the "Acting as" picker (top right) is who the dashboard acts
 
 ## Live script (Telegram)
 
-Kevin replies when a message says "kevin", mentions @kevin_apt4b_bot, replies to one of his messages, or is a voice note. Everything else is logged silently as context for him. Say the lines exactly; after each one, switch to the dashboard tab in the last column (pages are dynamic; a reload shows the new state).
+Kevin replies when a message says "kevin", mentions @kevin_apt4b_bot, replies to one of his messages, or is a voice note. Everything else is logged silently as context for him.
+
+**How Kevin decides to talk.** Once he has replied, he keeps listening for 3 minutes (up to 3 follow-up messages): "Kevin, add oat milk" then "and 2 bags of chips too" works without saying his name again, because the follow-up goes to him with permission to stay silent. Roommate chatter in that window ("lol Ryan you're late again") he reads and skips; after 3 minutes, or 4 messages without him, you have to call him again. His own reminders and reports do not open that window. Say the lines exactly; after each one, switch to the dashboard tab in the last column (pages are dynamic; a reload shows the new state).
 
 | # | Say in Telegram | What Kevin does | Tool | Show |
 | --- | --- | --- | --- | --- |
@@ -85,7 +87,8 @@ Narrate it as "the chat and the dashboard are two front doors to the same servic
 ```
  Telegram group --webhook /api/telegram--> channels/telegram.ts --> router.ts
    |   voice note --> lib/voice.ts (OpenRouter chat model, STT_MODEL, input_audio) --> text
-   |                                        (log every message; reply if "kevin" / @bot / reply-to-Kevin / voice)
+   |                                        (log every message; reply if "kevin" / @bot / reply-to-Kevin / voice;
+   |                                         3-min attention window after a reply: model may answer "[silent]")
    |                                                                |
  Dashboard (Next 16) --Ask Kevin /api/chat-------------------------> agent/kevin.ts  askKevin(ctx, text)
    |   pages + server actions                                        Mastra Agent, model "neon/<id>" via the
