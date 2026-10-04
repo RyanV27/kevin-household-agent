@@ -1,4 +1,4 @@
-app = "kevin"
+app = "belikekevin"
 primary_region = "iad" # next to Neon us-east-2
 
 [http_service]
