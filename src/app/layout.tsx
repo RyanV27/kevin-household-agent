@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { Fraunces, Inter } from "next/font/google";
 import { dashboardCtx } from "@/lib/dashboard";
-import { members } from "@/services";
+import { leasing, members } from "@/services";
 import { NavLinks } from "@/components/nav-links";
 import "./globals.css";
 
@@ -22,7 +22,9 @@ async function setActor(form: FormData) {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const ctx = await dashboardCtx();
-  const people = ctx ? await members.listMembers(ctx) : [];
+  const [people, unread] = ctx
+    ? await Promise.all([members.listMembers(ctx), leasing.unreadCount(ctx).catch(() => 0)])
+    : [[], 0];
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body>
@@ -30,7 +32,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <div className="shell">
           <header className="topbar">
             <Link href="/" className="brand"><b>🏠 Kevin</b><small>Nobody cheats Kevin.</small></Link>
-            <NavLinks />
+            <NavLinks unread={unread} />
             {people.length > 0 && (
               <form action={setActor} className="actor">
                 <label htmlFor="actor">Acting as</label>

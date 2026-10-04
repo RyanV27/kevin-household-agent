@@ -137,3 +137,18 @@ button:hover, .btn:hover { filter: brightness(1.08); }
   h1 { font-size: 26px; }
   .actor { margin-left: 0; }
 }
+
+/* Inbox */
+.inbox { display: grid; gap: 16px; grid-template-columns: minmax(260px, 340px) 1fr; align-items: start; }
+.threads .list > li { padding: 0; }
+.thread { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 8px; margin: 0 -8px; border-radius: 8px; text-decoration: none; min-width: 0; }
+.thread:hover { background: var(--surface-2); }
+.thread.active { background: var(--red-soft); }
+.clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex: none; }
+.msg { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; background: var(--surface-2); }
+.msg.sent { background: var(--green-soft); border-color: transparent; }
+.msg p { margin: 6px 0 0; white-space: pre-wrap; }
+.badge { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: var(--red); color: var(--red-ink); font-size: 11px; line-height: 18px; text-align: center; }
+textarea { resize: vertical; }
+@media (max-width: 760px) { .inbox { grid-template-columns: 1fr; } }
