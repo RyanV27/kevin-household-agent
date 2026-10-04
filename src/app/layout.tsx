@@ -6,6 +6,7 @@ import { Fraunces, Inter } from "next/font/google";
 import { dashboardCtx } from "@/lib/dashboard";
 import { leasing, members } from "@/services";
 import { NavLinks } from "@/components/nav-links";
+import { AskKevin } from "@/components/ask-kevin";
 import "./globals.css";
 
 export const metadata = { title: "Kevin", description: "Nobody cheats Kevin." };
@@ -47,6 +48,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           </header>
           {children}
         </div>
+        <AskKevin actorName={people.find((m) => m.id === ctx?.actorId)?.name} />
       </body>
     </html>
   );
