@@ -1,15 +1,18 @@
-// P5 · Ryan. Follow app/members/page.tsx: read via services, write via server actions + revalidatePath.
+// P5 · Placeholder until the module is built. Follow app/members/page.tsx: read via services, write via server actions + revalidatePath.
 import { dashboardCtx } from "@/lib/dashboard";
+import { Empty, NoHousehold, PageHead } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeasingPage() {
   const ctx = await dashboardCtx();
-  if (!ctx) return <p>No household yet.</p>;
+  if (!ctx) return <NoHousehold />;
   return (
     <main>
-      <h1>Leasing</h1>
-      <p>TODO(P5): see plans/kevin-module-prompts.md</p>
+      <PageHead title="Leasing" quip="Kevin handles the grown-up stuff." />
+      <div className="card">
+        <Empty title="No letters to the leasing office.">Work orders and email threads will show up here.</Empty>
+      </div>
     </main>
   );
 }

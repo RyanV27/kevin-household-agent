@@ -1,15 +1,18 @@
-// P1 · Ryan. Follow app/members/page.tsx: read via services, write via server actions + revalidatePath.
+// P1 · Placeholder until the module is built. Follow app/members/page.tsx: read via services, write via server actions + revalidatePath.
 import { dashboardCtx } from "@/lib/dashboard";
+import { Empty, NoHousehold, PageHead } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function MoneyPage() {
   const ctx = await dashboardCtx();
-  if (!ctx) return <p>No household yet.</p>;
+  if (!ctx) return <NoHousehold />;
   return (
     <main>
-      <h1>Money</h1>
-      <p>TODO(P1): see plans/kevin-module-prompts.md</p>
+      <PageHead title="Money" quip="Keep the change, ya filthy animal." />
+      <div className="card">
+        <Empty title="Kevin's still counting.">Expenses, splits and settling up land here next.</Empty>
+      </div>
     </main>
   );
 }

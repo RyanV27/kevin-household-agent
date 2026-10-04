@@ -1,0 +1,139 @@
+/* Kevin theme: McCallister house at Christmas. Cream paper, house red, evergreen, a little gold. */
+:root {
+  --bg: #faf6ef;
+  --surface: #ffffff;
+  --surface-2: #f3ece0;
+  --ink: #1f1a17;
+  --muted: #6f655c;
+  --line: #e6dccd;
+  --red: #b3261e;
+  --red-ink: #ffffff;
+  --red-soft: #f8e3e0;
+  --green: #1f5d3a;
+  --green-soft: #e2efe6;
+  --gold: #c9973b;
+  --gold-soft: #f7ecd6;
+  --shadow: 0 1px 2px rgb(31 26 23 / 0.06), 0 4px 16px rgb(31 26 23 / 0.05);
+  --radius: 12px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15120f;
+    --surface: #1e1a16;
+    --surface-2: #27221d;
+    --ink: #f3ece0;
+    --muted: #a99d90;
+    --line: #362f28;
+    --red: #e0574d;
+    --red-ink: #1a0d0b;
+    --red-soft: #3a1c19;
+    --green: #6fbf8e;
+    --green-soft: #18291f;
+    --gold: #e0b45e;
+    --gold-soft: #2e2615;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* The plaid ribbon across the top of the house. */
+.plaid {
+  height: 8px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 14px, rgb(255 255 255 / 0.18) 14px 18px),
+    repeating-linear-gradient(90deg, var(--red) 0 28px, var(--green) 28px 40px, var(--red) 40px 56px, var(--gold) 56px 60px);
+}
+
+h1, h2, h3 { font-family: var(--font-display), Georgia, serif; line-height: 1.2; margin: 0; }
+h1 { font-size: 32px; font-weight: 700; }
+h2 { font-size: 19px; font-weight: 600; margin-bottom: 12px; }
+a { color: inherit; }
+small, .muted { color: var(--muted); }
+code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: 0.9em; }
+
+/* Layout */
+.shell { max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 16px 0; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+.brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; }
+.brand b { font-family: var(--font-display), Georgia, serif; font-size: 22px; color: var(--red); }
+.brand small { font-style: italic; }
+.nav { display: flex; flex-wrap: wrap; gap: 2px; }
+.nav a { text-decoration: none; padding: 6px 10px; border-radius: 8px; color: var(--muted); font-weight: 500; }
+.nav a:hover { background: var(--surface-2); color: var(--ink); }
+.nav a[aria-current="page"] { background: var(--red-soft); color: var(--red); }
+.actor { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+.page-head { margin-bottom: 24px; }
+.quip { margin: 6px 0 0; color: var(--muted); font-style: italic; }
+.quip::before { content: "“"; }
+.quip::after { content: "”"; }
+
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.spacer { flex: 1; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.card > h2:first-child { display: flex; align-items: center; gap: 8px; }
+
+.stat { font-family: var(--font-display), Georgia, serif; font-size: 28px; font-weight: 700; }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+
+/* Lists and tables */
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.list > li:last-child { border-bottom: 0; }
+.table { width: 100%; border-collapse: collapse; }
+.table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--line); }
+.table td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.table tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.pill.red { background: var(--red-soft); color: var(--red); }
+.pill.green { background: var(--green-soft); color: var(--green); }
+.pill.gold { background: var(--gold-soft); color: var(--gold); }
+
+/* Forms */
+input, select, textarea {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-color: var(--gold); }
+label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end; }
+
+button, .btn {
+  font: inherit; font-weight: 600; cursor: pointer; border: 1px solid transparent;
+  background: var(--red); color: var(--red-ink); padding: 7px 14px; border-radius: 8px; text-decoration: none;
+}
+button:hover, .btn:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { background: var(--surface-2); filter: none; }
+.btn-danger { background: transparent; color: var(--red); border-color: transparent; }
+.btn-danger:hover { background: var(--red-soft); filter: none; }
+
+/* Empty states get a line from Kevin. */
+.empty { text-align: center; padding: 28px 16px; color: var(--muted); }
+.empty b { display: block; font-family: var(--font-display), Georgia, serif; font-size: 17px; color: var(--ink); margin-bottom: 4px; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 26px; }
+  .actor { margin-left: 0; }
+}

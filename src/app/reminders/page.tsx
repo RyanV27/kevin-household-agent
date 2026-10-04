@@ -1,15 +1,18 @@
-// P4 · Ryan. Follow app/members/page.tsx: read via services, write via server actions + revalidatePath.
+// P4 · Placeholder until the module is built. Follow app/members/page.tsx: read via services, write via server actions + revalidatePath.
 import { dashboardCtx } from "@/lib/dashboard";
+import { Empty, NoHousehold, PageHead } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function RemindersPage() {
   const ctx = await dashboardCtx();
-  if (!ctx) return <p>No household yet.</p>;
+  if (!ctx) return <NoHousehold />;
   return (
     <main>
-      <h1>Reminders</h1>
-      <p>TODO(P4): see plans/kevin-module-prompts.md</p>
+      <PageHead title="Reminders" quip="KEVIN!" />
+      <div className="card">
+        <Empty title="Nothing to forget yet.">Rent and other reminders will live here.</Empty>
+      </div>
     </main>
   );
 }
