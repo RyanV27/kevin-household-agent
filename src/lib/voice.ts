@@ -3,9 +3,9 @@ export async function transcribe(audio: ArrayBuffer, filename = "voice.ogg"): Pr
   const form = new FormData();
   form.append("file", new Blob([audio], { type: "audio/ogg" }), filename);
   form.append("model", process.env.STT_MODEL ?? "whisper-1");
-  const res = await fetch(`${process.env.LLM_BASE_URL}/audio/transcriptions`, {
+  const res = await fetch(`${process.env.STT_BASE_URL}/audio/transcriptions`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${process.env.LLM_API_KEY}` },
+    headers: { Authorization: `Bearer ${process.env.STT_API_KEY}` },
     body: form,
   });
   if (!res.ok) throw new Error(`transcription failed: ${res.status} ${await res.text()}`);

@@ -23,7 +23,7 @@ src/
   channels/types.ts     IncomingMessage, Outgoing, Channel { send(householdId, msg) }
   channels/telegram.ts  grammY bot + telegram.send()
   router.ts             logs every message, decides if Kevin replies, calls askKevin
-  lib/llm.ts            OpenAI-compatible provider (Neon AI Gateway)
+  lib/llm.ts            model id for the Neon AI Gateway ("neon/<id>")
   lib/voice.ts          speech-to-text
   lib/instacart.ts lib/agentmail.ts   integration clients (stubs)
   lib/dashboard.ts      dashboardCtx(): first household + "actor" cookie member
@@ -53,7 +53,7 @@ scripts/seed.ts         demo house "Apt 4B"
 ## Library notes (versions in package-lock)
 
 - **Mastra v1:** `createTool({ id, description, inputSchema, execute: async (input, context) => ... })`. The first arg is the parsed input, not `{ context }`. Agent needs `id`. Memory call: `agent.generate(text, { memory: { thread, resource } })`.
-- **LLM:** `gateway.chat(model)` (Chat Completions), because OpenAI-compatible gateways often lack the Responses API.
+- **LLM:** Neon AI Gateway through Mastra's model router: `model = "neon/<id>"` in `lib/llm.ts`, which reads `NEON_AI_GATEWAY_BASE_URL` + `NEON_AI_GATEWAY_TOKEN`. Use ids from the branch's `/v1/models`. Speech-to-text uses separate `STT_*` vars (no Whisper on the gateway).
 - **grammY:** webhook via `webhookCallback(bot, "std/http")` in `app/api/telegram`. Locally use `npm run poll` (it deletes the webhook; re-set it after).
 - **Next 16:** Mastra and pg are in `serverExternalPackages`.
 
@@ -61,7 +61,7 @@ scripts/seed.ts         demo house "Apt 4B"
 
 ```
 npm install
-cp .env.example .env          # fill DATABASE_URL, LLM_*, TELEGRAM_*
+cp .env.example .env          # fill DATABASE_URL, NEON_AI_GATEWAY_*, LLM_MODEL, TELEGRAM_*
 npm run db:push               # create tables on Neon
 TELEGRAM_CHAT_ID=-100... npm run seed
 npm run poll                  # Kevin in your group, locally
