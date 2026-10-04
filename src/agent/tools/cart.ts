@@ -9,17 +9,25 @@ import { toCents } from "./util";
 export const cartTools = (ctx: Ctx, outbox: ToolOutbox) => ({
   cart_add: createTool({
     id: "cart_add",
-    description: "Add grocery items to the shared cart, attributed to the sender. shared=true for household items (toilet paper, dish soap).",
+    description:
+      "Add grocery items to the shared cart, attributed to the sender ('add 3 bags of chips for me' -> one item, name 'chips', qty '3 bags'). shared=true for household items (toilet paper, dish soap).",
     inputSchema: z.object({
-      items: z.array(z.object({ name: z.string(), qty: z.string().optional() })),
-      shared: z.boolean().optional(),
+      items: z
+        .array(
+          z.object({
+            name: z.string().min(1).describe("Item name without the quantity, e.g. 'chips'"),
+            qty: z.string().optional().describe("Free text quantity, e.g. '3 bags', '2', '1 gallon'. Omit for 1."),
+          }),
+        )
+        .min(1),
+      shared: z.boolean().optional().describe("true when it's for the whole house, not one person"),
     }),
     execute: async (input) => cart.addItems(ctx, input),
   }),
   cart_remove: createTool({
     id: "cart_remove",
-    description: "Remove an item from the cart by name.",
-    inputSchema: z.object({ name: z.string() }),
+    description: "Remove an item from the open cart by name (case-insensitive).",
+    inputSchema: z.object({ name: z.string().min(1) }),
     execute: async (input) => ({ removed: await cart.removeItem(ctx, input) }),
   }),
   cart_view: createTool({
@@ -40,8 +48,8 @@ export const cartTools = (ctx: Ctx, outbox: ToolOutbox) => ({
   }),
   cart_purchased: createTool({
     id: "cart_purchased",
-    description: "Someone bought the cart for a total. Creates one expense split by who added what.",
-    inputSchema: z.object({ total: z.number().positive().describe("Dollars") }),
+    description: "Someone bought the cart for a total ('I bought the groceries, $84'). Creates one expense split by who added what. Default payer = sender.",
+    inputSchema: z.object({ total: z.number().positive().describe("Dollars, e.g. 84.2") }),
     execute: async ({ total }) => cart.markPurchased(ctx, { totalCents: toCents(total) }),
   }),
 });

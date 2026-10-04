@@ -24,7 +24,7 @@ export async function askKevin(ctx: Ctx, input: string, chatter: string[] = []):
   const kevin = new Agent({
     id: "kevin",
     name: "Kevin",
-    instructions: `${PERSONA}\n\nRoommates: ${people.map((p) => p.name).join(", ") || "unknown yet"}.\nNow: ${new Date().toISOString()}.`,
+    instructions: `${PERSONA}\n\nRoommates: ${people.map((p) => p.name).join(", ") || "unknown yet"}.\nNow: ${new Date().toISOString()} (UTC). House timezone: America/Chicago — interpret times people say in that zone and pass ISO with an offset to tools.`,
     model,
     tools: makeTools(ctx, outbox),
     memory,
