@@ -34,6 +34,7 @@ export default async function Home() {
               {r.chores.map((c) => (
                 <li key={c.choreId}>
                   <span>{c.name}</span>
+                  <small className="muted">every {c.everyDays}d</small>
                   <span className="spacer" />
                   {c.whoseTurn && <small>{c.whoseTurn}&apos;s turn</small>}
                   <span className={`pill ${c.overdue ? "red" : "green"}`}>{c.overdue ? "Overdue" : "On track"}</span>
