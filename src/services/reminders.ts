@@ -22,7 +22,7 @@ export const RENT_HOUR_UTC = 14;
 
 /**
  * Convention: the household's rent reminder is the row with
- *   recurring = 'monthly' AND member_id IS NULL AND text LIKE 'Rent %'.
+ *   recurring = 'monthly' AND member_id IS NULL AND text LIKE 'Rent $%' (i.e. starts with an amount, as we write it).
  * There is no dedicated column; syncRentReminder() keeps exactly one unsent row matching this.
  */
 const RENT_TEXT_PREFIX = "Rent ";
@@ -32,7 +32,7 @@ const rentReminderFilter = (householdId: string) =>
     isNull(reminders.sentAt),
     eq(reminders.recurring, "monthly"),
     isNull(reminders.memberId),
-    like(reminders.text, `${RENT_TEXT_PREFIX}%`),
+    like(reminders.text, `${RENT_TEXT_PREFIX}$%`),
   );
 
 // ---------- pure date math (unit tested, no DB) ----------

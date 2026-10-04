@@ -26,7 +26,11 @@ async function setActor(form: FormData) {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const ctx = await dashboardCtx();
   const [people, unread] = ctx
-    ? await Promise.all([members.listMembers(ctx), leasing.unreadCount(ctx).catch(() => 0)])
+    ? await Promise.all([
+        members.listMembers(ctx),
+        // The badge is a nicety: never let a slow mail API hold up a page.
+        Promise.race([leasing.unreadCount(ctx), new Promise<number>((r) => setTimeout(() => r(0), 2500))]).catch(() => 0),
+      ])
     : [[], 0];
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>

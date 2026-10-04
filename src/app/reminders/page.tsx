@@ -3,16 +3,17 @@ import { revalidatePath } from "next/cache";
 import { dashboardCtx } from "@/lib/dashboard";
 import { members, reminders } from "@/services";
 import { Empty, NoHousehold, PageHead } from "@/components/ui";
+import { TzOffset, localDateTimeToDate } from "@/components/tz-offset";
 
 export const dynamic = "force-dynamic";
 
-// Known limitation: datetime-local has no zone, so `new Date(value)` uses the server's zone (UTC on Fly).
+// datetime-local has no zone: the form also posts the browser's UTC offset (see TzOffset) so we store the instant meant.
 async function add(form: FormData) {
   "use server";
   const ctx = await dashboardCtx();
   if (!ctx) return;
   const text = String(form.get("text") ?? "").trim();
-  const dueAt = new Date(String(form.get("dueAt") ?? ""));
+  const dueAt = localDateTimeToDate(String(form.get("dueAt") ?? ""), form.get("tzOffset"));
   if (!text || Number.isNaN(dueAt.getTime())) return;
   const who = String(form.get("memberId") ?? "");
   await reminders.setReminder(ctx, {
@@ -79,6 +80,7 @@ export default async function RemindersPage() {
               <div className="field">
                 <label htmlFor="dueAt">When</label>
                 <input id="dueAt" name="dueAt" type="datetime-local" required />
+                <TzOffset />
               </div>
               <div className="field">
                 <label htmlFor="memberId">For</label>

@@ -39,8 +39,8 @@ async function saveSettings(form: FormData) {
     name: text("name") || "Our place",
     rentCents: text("rent") ? Math.round(Number(text("rent")) * 100) : null,
     rentDueDay: text("dueDay") ? Math.min(28, Math.max(1, Math.round(Number(text("dueDay"))))) : null,
-    leasingEmail: text("leasingEmail") || null,
-    inboxAddress: text("inboxAddress") || null,
+    leasingEmail: text("leasingEmail").toLowerCase() || null,
+    inboxAddress: text("inboxAddress").toLowerCase() || null,
   });
   await reminders.syncRentReminder(ctx);
   revalidatePath("/members");

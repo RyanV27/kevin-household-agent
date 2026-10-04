@@ -50,7 +50,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const [house, threads, messages] = await Promise.all([
     members.getHousehold(ctx.householdId),
     leasing.inboxThreads(ctx),
-    thread ? leasing.openThread(ctx, thread) : Promise.resolve([]),
+    // A stale or mistyped ?thread= id must not take the whole inbox down: fall back to the list.
+    thread ? leasing.openThread(ctx, thread).catch(() => []) : Promise.resolve([]),
   ]);
   const open = threads.find((t) => t.threadId === thread);
 

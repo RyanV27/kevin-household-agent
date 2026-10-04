@@ -2,6 +2,7 @@
 // P7 · "Ask Kevin" drawer. Same agent as Telegram, acting as the dashboard's selected member (POST /api/chat).
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
 
 type Button = { text: string; url: string };
 type Msg = {
@@ -58,6 +59,7 @@ export function AskKevin({ actorName }: { actorName?: string }) {
   const [hydrated, setHydrated] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
 
   // Restore from sessionStorage after mount (never during SSR).
   useEffect(() => {
@@ -115,6 +117,8 @@ export function AskKevin({ actorName }: { actorName?: string }) {
         return;
       }
       push({ id: uid(), role: "kevin", text: data.text, buttons: data.buttons?.length ? data.buttons : undefined });
+      // Kevin may have logged an expense or chore: re-render the server cards on this page.
+      router.refresh();
     } catch (err) {
       if (process.env.NODE_ENV !== "production") console.error("[ask-kevin]", err);
       push({ id: uid(), role: "kevin", text: BUSY });
@@ -122,7 +126,7 @@ export function AskKevin({ actorName }: { actorName?: string }) {
       setBusy(false);
       inputRef.current?.focus();
     }
-  }, [draft, busy, push]);
+  }, [draft, busy, push, router]);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();

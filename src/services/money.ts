@@ -162,7 +162,7 @@ export async function logExpense(
 export async function getBalances(ctx: Pick<Ctx, "householdId">): Promise<Balance[]> {
   const hid = ctx.householdId;
   const total = sql<number>`coalesce(sum(${expenses.cents}), 0)::int`;
-  const [people, paid, owed, sent, received] = await Promise.all([
+  const [people, paid, owed, sent, received, everyone] = await Promise.all([
     listMembers(ctx),
     db.select({ id: expenses.payerId, cents: total }).from(expenses).where(eq(expenses.householdId, hid)).groupBy(expenses.payerId),
     db
@@ -181,6 +181,7 @@ export async function getBalances(ctx: Pick<Ctx, "householdId">): Promise<Balanc
       .from(settlements)
       .where(eq(settlements.householdId, hid))
       .groupBy(settlements.toId),
+    db.select({ id: schema.members.id, name: schema.members.name, active: schema.members.active }).from(schema.members).where(eq(schema.members.householdId, hid)),
   ]);
 
   const tally = new Map<string, number>();
@@ -192,8 +193,11 @@ export async function getBalances(ctx: Pick<Ctx, "householdId">): Promise<Balanc
   add(sent, 1);
   add(received, -1);
 
-  return people
-    .map((m) => ({ memberId: m.id, name: m.name, cents: tally.get(m.id) ?? 0 }))
+  // Removed roommates stay in the ledger while they still owe or are owed, so balances always net to zero.
+  const movedOut = everyone
+    .filter((m) => !m.active && (tally.get(m.id) ?? 0) !== 0)
+    .map((m) => ({ memberId: m.id, name: `${m.name} (moved out)`, cents: tally.get(m.id) ?? 0 }));
+  return [...people.map((m) => ({ memberId: m.id, name: m.name, cents: tally.get(m.id) ?? 0 })), ...movedOut]
     .sort((a, b) => b.cents - a.cents || a.name.localeCompare(b.name));
 }
 
