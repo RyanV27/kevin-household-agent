@@ -9,6 +9,8 @@ import { NavLinks } from "@/components/nav-links";
 import "./globals.css";
 
 export const metadata = { title: "Kevin", description: "Nobody cheats Kevin." };
+// The layout reads the DB (roommates, unread mail), so nothing can be prerendered at build time, not even 404.
+export const dynamic = "force-dynamic";
 
 const display = Fraunces({ subsets: ["latin"], variable: "--font-display" });
 const body = Inter({ subsets: ["latin"], variable: "--font-body" });
