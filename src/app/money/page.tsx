@@ -56,8 +56,8 @@ export default async function MoneyPage() {
   const others = people.filter((m) => m.id !== ctx.actorId);
 
   return (
-    <main>
-      <PageHead title="Money" quip="Keep the change, ya filthy animal." />
+    <main data-accent="green">
+      <PageHead title="Money" quip="Keep the change, ya filthy animal." emoji="💸" />
       <div className="grid">
         <section className="card">
           <h2>💸 Balances · who&apos;s a filthy animal</h2>
@@ -103,7 +103,7 @@ export default async function MoneyPage() {
               ))}
             </ul>
           ) : (
-            <Empty title="All square. No filthy animals today.">Nobody owes anybody. Keep it that way, ya filthy animals.</Empty>
+            <Empty title="All square. No filthy animals today." className="socks">Nobody owes anybody. Keep it that way, ya filthy animals.</Empty>
           )}
           {others.length > 0 && (
             <form action={settle} className="row" style={{ marginTop: 16 }}>
@@ -157,29 +157,31 @@ export default async function MoneyPage() {
           </form>
         </section>
 
-        <section className="card">
+        <section className="card card-wide">
           <h2>👀 The receipts · recent expenses</h2>
           {recent.length ? (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>What</th>
-                  <th>Paid by</th>
-                  <th className="num">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((e) => (
-                  <tr key={e.id}>
-                    <td className="muted" style={{ whiteSpace: "nowrap" }}>{day(e.createdAt)}</td>
-                    <td className="clip" style={{ maxWidth: 220 }} title={e.splits?.map((s) => `${s.name} ${dollars(s.cents)}`).join(" · ")}>{e.description}</td>
-                    <td>{e.payerName}</td>
-                    <td className="num">{dollars(e.cents)}</td>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>What</th>
+                    <th>Paid by</th>
+                    <th className="num">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recent.map((e) => (
+                    <tr key={e.id}>
+                      <td className="muted nowrap">{day(e.createdAt)}</td>
+                      <td className="wrap" title={e.splits?.map((s) => `${s.name} ${dollars(s.cents)}`).join(" · ")}>{e.description}</td>
+                      <td className="wrap">{e.payerName}</td>
+                      <td className="num">{dollars(e.cents)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <Empty title="Nothing logged yet.">The first cheese pizza is on somebody. Just for me.</Empty>
           )}

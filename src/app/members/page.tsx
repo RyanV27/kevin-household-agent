@@ -51,8 +51,8 @@ export default async function MembersPage() {
   if (!ctx) return <NoHousehold />;
   const [people, house] = await Promise.all([members.listMembers(ctx), members.getHousehold(ctx.householdId)]);
   return (
-    <main>
-      <PageHead title="Roommates" quip="Hope everyone's accounted for this time." />
+    <main data-accent="gold">
+      <PageHead title="Roommates" quip="Hope everyone's accounted for this time." emoji="🧦" />
       <div className="grid">
         <section className="card">
           <h2>🫡 Who lives here · headcount</h2>

@@ -52,13 +52,23 @@ Kevin: Harry: 0 chores this week, last one 9 days ago. Not mean, just the chart 
 [Fuller] the sink is leaking, tell the leasing office
 Kevin: Say less. Work order sent to the leasing office: kitchen sink leaking. I'll post whatever they say back 🫡`;
 
-export async function askKevin(ctx: Ctx, input: string, chatter: string[] = []): Promise<Outgoing> {
+export type AskOptions = {
+  /**
+   * Attention-window mode (router only): the message did not name Kevin, he may answer "[silent]" to skip it.
+   * The router drops such replies (router-policy.parseSilent). The dashboard never sets this.
+   */
+  mayStaySilent?: boolean;
+};
+
+const MAY_STAY_SILENT = `This message was not addressed to you by name. If it's roommate chatter that doesn't need you (no request, no info worth logging, not a follow-up to what you just said), reply with exactly [silent] and nothing else. If it continues the conversation with you or asks/tells you something you can act on, respond normally.`;
+
+export async function askKevin(ctx: Ctx, input: string, chatter: string[] = [], opts: AskOptions = {}): Promise<Outgoing> {
   const people = await listMembers(ctx);
   const outbox: ToolOutbox = { buttons: [] };
   const kevin = new Agent({
     id: "kevin",
     name: "Kevin",
-    instructions: `${PERSONA}\n\nRoommates: ${people.map((p) => p.name).join(", ") || "unknown yet"}.\nNow: ${new Date().toISOString()} (UTC). House timezone: America/Chicago — interpret times people say in that zone and pass ISO with an offset to tools.`,
+    instructions: `${PERSONA}\n\nRoommates: ${people.map((p) => p.name).join(", ") || "unknown yet"}.\nNow: ${new Date().toISOString()} (UTC). House timezone: America/Chicago — interpret times people say in that zone and pass ISO with an offset to tools.${opts.mayStaySilent ? `\n\n${MAY_STAY_SILENT}` : ""}`,
     model,
     tools: makeTools(ctx, outbox),
     memory,
@@ -68,5 +78,8 @@ export async function askKevin(ctx: Ctx, input: string, chatter: string[] = []):
     memory: { thread: `household-${ctx.householdId}`, resource: ctx.householdId },
     maxSteps: 6,
   });
+  // Empty text with no tool call in silent-allowed mode reads as "nothing to say": hand the router the token
+  // instead of a stray 👍 in the group. If a tool did run, the 👍 is still the acknowledgement.
+  if (opts.mayStaySilent && !res.text && !res.toolCalls?.length) return { text: "[silent]", buttons: [] };
   return { text: res.text || "👍", buttons: outbox.buttons };
 }
