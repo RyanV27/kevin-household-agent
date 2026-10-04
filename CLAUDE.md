@@ -36,8 +36,8 @@ scripts/seed.ts         demo house "Apt 4B"
 
 ## Ownership
 
-- **Ryan:** `src/services/*`, `src/db/*`, `src/app/**` pages, `app/api/agentmail`, `scripts/seed.ts`.
-- **Sudhersan:** `src/agent/**`, `src/channels/**`, `src/router.ts`, `src/lib/{llm,voice,instacart,agentmail}.ts`, `src/jobs/**`, `app/api/{telegram,chat}`.
+- **Sudhersan:** `src/services/*` and `src/app/**` pages (taken over from Ryan), plus `src/agent/**`, `src/channels/**`, `src/router.ts`, `src/lib/{llm,voice,instacart,agentmail}.ts`, `src/jobs/**`, `app/api/{telegram,chat}`.
+- **Ryan:** `src/db/*`, `app/api/agentmail`, `scripts/seed.ts`. Older `TODO(Ryan, ...)` comments in services/pages now belong to Sudhersan.
 - `TODO(Name, P#)` comments mark who fills what. Grep `TODO(` to see what's left.
 - Service **signatures** are the contract. Change a body freely; change a signature only together with its tool.
 
@@ -74,3 +74,13 @@ Deploy: `fly launch --no-deploy` (once), `fly secrets set ...` for every var in 
 ## Before you commit
 
 `npm run typecheck` must pass. Test a service with a quick `tsx` script or a `*.test.ts` before wiring its tool or page. Commit to `main` in small pieces.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
