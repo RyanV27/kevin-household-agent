@@ -15,10 +15,10 @@ const UTTERANCES = [
   "mark the trash as done for Alex",
 ];
 
-const baseUrl = process.env.LLM_BASE_URL ?? "";
-const apiKey = process.env.LLM_API_KEY ?? "";
+const baseUrl = process.env.NEON_AI_GATEWAY_BASE_URL ?? "";
+const apiKey = process.env.NEON_AI_GATEWAY_TOKEN ?? "";
 if (!baseUrl || baseUrl.includes("<") || !apiKey || apiKey.startsWith("napi_")) {
-  console.log("LLM gateway not configured — set LLM_API_KEY (Neon AI Gateway credential, scope ai_gateway:invoke; not a napi_ key) and LLM_BASE_URL in .env.");
+  console.log("LLM gateway not configured — set NEON_AI_GATEWAY_BASE_URL and NEON_AI_GATEWAY_TOKEN (gateway credential, scope ai_gateway:invoke; not a napi_ key) in .env.");
   console.log("Nothing was sent to the model. Tool-level proof: npm run test:tools");
   process.exit(0);
 }
