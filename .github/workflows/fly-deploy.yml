@@ -1,9 +1,9 @@
-# Deploy to Fly on every push to the working branch (add main here once the PR is merged).
+# Deploy to Fly on every push to main.
 # Needs the repo secret FLY_API_TOKEN: `fly tokens create deploy -a <app>` (a repo admin adds it).
 name: Deploy to Fly
 on:
   push:
-    branches: [feat/dashboard-services]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
