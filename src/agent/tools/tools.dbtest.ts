@@ -6,7 +6,7 @@
 // that references it and asserts the DB is clean. The seeded "Apt 4B" rows are never touched.
 import { after, before, describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { isValidationError } from "@mastra/core/tools";
 import { db, schema } from "@/db";
@@ -313,7 +313,10 @@ describe("Kevin tools against the dev DB", () => {
 
   test("maintenance_done: fuzzy 'hvac filter' marks it done; unknown item throws with known items", async () => {
     await run("maintenance_done", { item: "hvac filter" });
-    const [row] = await db.select().from(schema.maintenance).where(eq(schema.maintenance.item, "Replace HVAC filter"));
+    const [row] = await db
+      .select()
+      .from(schema.maintenance)
+      .where(and(eq(schema.maintenance.householdId, householdId), eq(schema.maintenance.item, "Replace HVAC filter")));
     assert.ok(row.lastDone && Date.now() - row.lastDone.getTime() < 60_000, "lastDone set to now");
     const due: MaintenanceItem[] = await run("maintenance_status", { dueOnly: true });
     assert.deepEqual(
@@ -357,18 +360,59 @@ describe("Kevin tools against the dev DB", () => {
     assert.equal(await count(schema.emails), 0, "nothing logged to emails");
   });
 
-  // ---------- cart (skips while the service is a stub) ----------
+  test("leasing_status: { threads: [] } without AGENTMAIL_API_KEY; with it, a threads array + the inbox button", async (t) => {
+    const saved = process.env.AGENTMAIL_API_KEY;
+    process.env.AGENTMAIL_API_KEY = "";
+    try {
+      outbox.buttons.length = 0;
+      assert.deepEqual(await run("leasing_status", {}), { threads: [] });
+      assert.equal(outbox.buttons.length, 1);
+      assert.match(outbox.buttons[0].url, /\/inbox$/, "no thread -> plain /inbox link");
+    } finally {
+      if (saved === undefined) delete process.env.AGENTMAIL_API_KEY;
+      else process.env.AGENTMAIL_API_KEY = saved;
+    }
+    if (!process.env.AGENTMAIL_API_KEY) return t.skip("AGENTMAIL_API_KEY not set; live status not checked");
+    // The throwaway house has no inboxAddress, so addresses() falls back to AGENTMAIL_INBOX (may be empty -> []).
+    outbox.buttons.length = 0;
+    const r: { threads: { threadId: string; lastFrom: "kevin" | "office"; unread: boolean; messageCount: number }[] } = await run("leasing_status", {});
+    assert.ok(Array.isArray(r.threads));
+    for (const th of r.threads) {
+      assert.ok(th.lastFrom === "kevin" || th.lastFrom === "office");
+      assert.equal(typeof th.unread, "boolean");
+      assert.ok(th.messageCount >= 1);
+    }
+    assert.equal(outbox.buttons.length, 1);
+    if (r.threads.length) assert.match(outbox.buttons[0].url, new RegExp(`/inbox\\?thread=${encodeURIComponent(r.threads[0].threadId)}$`));
+    assert.equal(await count(schema.emails), 0, "status is read-only");
+  });
 
-  let cartIsStub = false;
+  // ---------- cart (simulated store: estimates from lib/prices, checkout at /cart/checkout) ----------
 
-  test("cart_add: '3 bags of chips for me' + a shared item", async (t) => {
-    const added: CartItem[] = await run("cart_add", { items: [{ name: "chips", qty: "3 bags" }] });
-    assert.equal(added.length, 1);
-    assert.equal(added[0].name, "chips");
-    assert.equal(added[0].qty, "3 bags");
-    const view: Record<string, CartItem[]> = await run("cart_view", {});
-    cartIsStub = String(added[0].id).startsWith("fake") || Object.keys(view).length === 0;
-    if (cartIsStub) return t.skip("cart service not implemented yet");
+  type CartAdd = { items: CartItem[]; estTotalCents: number; estTotal: string };
+  type CartView = { groups: Record<string, CartItem[]>; itemCount: number; estTotalCents: number; estTotal: string };
+  const appUrl = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
+
+  test("cart_add: '3 bags of chips for me' + a shared item; estimates from the catalog; buttons attached", async () => {
+    outbox.buttons.length = 0;
+    const added: CartAdd = await run("cart_add", { items: [{ name: "chips", qty: "3 bags" }] });
+    assert.equal(added.items.length, 1);
+    assert.equal(added.items[0].name, "chips");
+    assert.equal(added.items[0].qty, "3 bags");
+    assert.equal(added.items[0].addedByName, "Sudhersan");
+    assert.equal(added.items[0].estCents, 3 * 449, "3 x catalog price of chips");
+    assert.equal(added.estTotalCents, 3 * 449);
+    if (appUrl) {
+      assert.deepEqual(
+        outbox.buttons.map((b) => b.url).sort(),
+        [`${appUrl}/cart`, `${appUrl}/cart/checkout`].sort(),
+        "View cart + Checkout buttons",
+      );
+      assert.ok(outbox.buttons.some((b) => /view cart/i.test(b.text)));
+      assert.ok(outbox.buttons.some((b) => /checkout/i.test(b.text)));
+    } else {
+      assert.equal(outbox.buttons.length, 0, "no APP_URL -> no buttons");
+    }
 
     await run("cart_add", { items: [{ name: "dish soap" }], shared: true });
     const rows = await db.select().from(schema.cartItems).where(eq(schema.cartItems.householdId, householdId));
@@ -378,23 +422,26 @@ describe("Kevin tools against the dev DB", () => {
     assert.equal(chips?.addedBy, member.Sudhersan);
     assert.equal(chips?.shared, false);
     assert.equal(chips?.status, "open");
-    assert.equal(rows.find((r) => r.name === "dish soap")?.shared, true);
+    assert.equal(chips?.estCents, 1347);
+    const soap = rows.find((r) => r.name === "dish soap");
+    assert.equal(soap?.shared, true);
+    assert.equal(soap?.qty, "1");
+    assert.equal(soap?.estCents, 349);
   });
 
-  test("cart_view groups open items by who added them", async (t) => {
-    const view: Record<string, CartItem[]> = await run("cart_view", {});
-    if (cartIsStub) return t.skip("cart service not implemented yet");
-    const all = Object.values(view).flat();
+  test("cart_view groups open items by who added them, with the estimated total", async () => {
+    const view: CartView = await run("cart_view", {});
+    const all = Object.values(view.groups).flat();
     assert.deepEqual(all.map((i) => i.name).sort(), ["chips", "dish soap"]);
-    assert.ok(Object.keys(view).some((k) => /sudhersan/i.test(k)), "a group for the sender");
-    assert.ok(Object.keys(view).some((k) => /shared/i.test(k)), "a Shared group");
+    assert.ok(Object.keys(view.groups).some((k) => /sudhersan/i.test(k)), "a group for the sender");
+    assert.ok(Object.keys(view.groups).some((k) => /shared/i.test(k)), "a Shared group");
+    assert.equal(view.groups.Shared?.[0]?.name, "dish soap");
+    assert.equal(view.itemCount, 2);
+    assert.equal(view.estTotalCents, 1347 + 349);
+    assert.equal(view.estTotal, "$16.96");
   });
 
-  test("cart_remove by name", async (t) => {
-    if (cartIsStub) {
-      await run("cart_remove", { name: "chips" });
-      return t.skip("cart service not implemented yet");
-    }
+  test("cart_remove by name", async () => {
     await run("cart_add", { items: [{ name: "oat milk", qty: "2" }] });
     assert.deepEqual(await run("cart_remove", { name: "Oat Milk" }), { removed: true });
     assert.deepEqual(await run("cart_remove", { name: "caviar" }), { removed: false });
@@ -402,31 +449,58 @@ describe("Kevin tools against the dev DB", () => {
     assert.deepEqual(open.filter((r) => r.status === "open").map((r) => r.name).sort(), ["chips", "dish soap"]);
   });
 
-  test("cart_checkout attaches the Instacart button via the outbox", async (t) => {
+  test("cart_checkout links to the simulated store and attaches the Checkout button via the outbox", async (t) => {
     outbox.buttons.length = 0;
-    const r: { itemCount: number; linkAttached: boolean } = await run("cart_checkout", {});
-    if (cartIsStub) return t.skip("cart service not implemented yet");
+    const r: { url: string | null; itemCount: number; linkAttached: boolean } = await run("cart_checkout", {});
     assert.equal(r.itemCount, 2);
+    assert.match(r.url ?? "", /\/cart\/checkout$/, "our own checkout page, never a third-party store");
     if (r.linkAttached) {
       assert.equal(outbox.buttons.length, 1);
+      assert.equal(outbox.buttons[0].text, "Checkout");
+      assert.equal(outbox.buttons[0].url, `${appUrl}/cart/checkout`);
       assert.match(outbox.buttons[0].url ?? "", /^https?:\/\//);
     } else {
       assert.equal(outbox.buttons.length, 0);
-      t.diagnostic("instacart link not configured; button not attached");
+      t.diagnostic("APP_URL not set; checkout button not attached");
     }
   });
 
-  test("cart_purchased: one expense split by who added what, items marked purchased", async (t) => {
+  test("cart_purchased: one expense split by who added what (shared split evenly), items marked purchased", async () => {
     const before = await count(schema.expenses);
     const e: Expense = await run("cart_purchased", { total: 30 });
-    if (cartIsStub) return t.skip("cart service not implemented yet");
     assert.equal(e.cents, 3000);
+    assert.equal(e.payerName, "Sudhersan");
+    assert.match(e.description, /Groceries \(2 items\)/);
     assert.equal(await count(schema.expenses), before + 1);
+    const [row] = await db.select().from(schema.expenses).where(eq(schema.expenses.id, e.id));
+    assert.equal(row.source, "cart");
     const splits = await db.select().from(schema.expenseSplits).where(eq(schema.expenseSplits.expenseId, e.id));
     assert.equal(splits.reduce((s, r) => s + r.cents, 0), 3000);
+    assert.equal(splits.length, 3, "chips -> Sudhersan, dish soap -> everyone");
+    const cents = Object.fromEntries(splits.map((s) => [s.memberId, s.cents]));
+    // weights: Sudhersan 1347 + 349/3, Ryan 349/3, Alex 349/3 (of 1696), scaled to 3000.
+    assert.ok(cents[member.Sudhersan] >= 2588 && cents[member.Sudhersan] <= 2590, `Sudhersan got ${cents[member.Sudhersan]}`);
+    assert.ok(Math.abs(cents[member.Ryan] - cents[member.Alex]) <= 1, "shared item split evenly");
+    assert.ok(cents[member.Ryan] >= 205 && cents[member.Ryan] <= 206);
     const items = await db.select().from(schema.cartItems).where(eq(schema.cartItems.householdId, householdId));
     assert.ok(items.filter((r) => r.name !== "oat milk").every((r) => r.status === "purchased"), "cart items marked purchased");
-    assert.deepEqual(await run("cart_view", {}), {});
+    const view: CartView = await run("cart_view", {});
+    assert.deepEqual(view.groups, {});
+    assert.equal(view.estTotalCents, 0);
+  });
+
+  test("cart_purchased: payer by name; people with nothing in the cart are left out of the split; empty cart throws", async () => {
+    await run("cart_add", { items: [{ name: "milk" }] });
+    const e: Expense = await run("cart_purchased", { total: 5, payer: "Ryan" });
+    assert.equal(e.payerName, "Ryan");
+    assert.equal(e.cents, 500);
+    assert.deepEqual(
+      (e.splits ?? []).map((s) => [s.name, s.cents]),
+      [["Sudhersan", 500]],
+      "Sudhersan's milk, paid by Ryan: only Sudhersan owes",
+    );
+    await assert.rejects(run("cart_purchased", { total: 5 }), /cart is empty/i);
+    await assert.rejects(run("cart_purchased", { total: 5, payer: "Buzz" }), /No roommate named "Buzz"/);
   });
 
   // ---------- coverage ----------

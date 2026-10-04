@@ -98,7 +98,7 @@ function assertWholeCents(cents: number, what = "Amount") {
  */
 export async function logExpense(
   ctx: Ctx,
-  input: { payerId?: string; cents: number; description: string; splitAmong?: string[]; splits?: SplitRow[] },
+  input: { payerId?: string; cents: number; description: string; splitAmong?: string[]; splits?: SplitRow[]; source?: "ui" | "chat" | "cart" },
 ): Promise<Expense> {
   assertWholeCents(input.cents);
   const description = input.description?.trim();
@@ -133,7 +133,7 @@ export async function logExpense(
     rows = splitEvenly(input.cents, among, payerId);
   }
 
-  const source = ctx.source === "ui" ? "ui" : "chat";
+  const source = input.source ?? (ctx.source === "ui" ? "ui" : "chat");
   const created = await db.transaction(async (tx) => {
     const [e] = await tx
       .insert(expenses)
