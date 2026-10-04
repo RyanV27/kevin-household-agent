@@ -53,6 +53,7 @@ export const CATALOG: Record<string, number> = {
   salmon: 1199,
   tofu: 299,
   "peanut butter": 449,
+  peanuts: 399,
   beans: 149,
   "black beans": 149,
   // snacks
@@ -64,6 +65,7 @@ export const CATALOG: Record<string, number> = {
   crackers: 349,
   popcorn: 349,
   pretzels: 349,
+  "rice cakes": 349,
   chocolate: 299,
   "granola bars": 549,
   // drinks
@@ -112,36 +114,66 @@ export const normalizeName = (s: string) => s.trim().toLowerCase().replace(/[^a-
 /** Trivial singular form so "bagel" matches "bagels" and "eggs" matches "egg" either way. */
 const singular = (s: string) => (s.length > 3 && s.endsWith("s") && !s.endsWith("ss") ? s.slice(0, -1) : s);
 
+/** Whole-word tokens, singularized, as a set ("Bag of Chips" -> {bag, of, chip}). */
+const tokens = (s: string) => new Set(normalizeName(s).split(" ").filter(Boolean).map(singular));
+
+const CATALOG_TOKENS: Array<{ key: string; toks: Set<string> }> = Object.keys(CATALOG).map((key) => ({ key, toks: tokens(key) }));
+
+const isSubset = (a: Set<string>, b: Set<string>) => [...a].every((t) => b.has(t));
+const overlap = (a: Set<string>, b: Set<string>) => [...a].filter((t) => b.has(t)).length;
+
 /**
- * Catalog lookup. Tiers, first hit wins: exact -> catalog name starts with the query (or vice versa)
- * -> one contains the other. Within a tier the shortest catalog name wins. Null when nothing matches.
+ * Catalog lookup on whole-word boundaries (tokens, plural-insensitive), so "pepperoni pizza" is pizza (not pepper),
+ * "butternut squash" is unknown (not butter) and "salted peanuts" is peanuts (not salt). Tiers, first hit wins:
+ *  1. same tokens ("oat milk", "Oat Milk", "egg" ~ "eggs");
+ *  2. every token of the catalog name is in the query ("whole milk" -> milk, "bag of chips" -> chips). The last
+ *     word of the query is usually the thing itself, so when it is a catalog word only names containing it count:
+ *     "chocolate milk" -> milk, "milk chocolate" -> chocolate, "tea towels" -> unknown (tea is just the modifier);
+ *  3. every token of the query is in the catalog name ("sparkling" -> sparkling water, "oat" -> oat milk).
+ * Within a tier the catalog name with the most matching tokens wins, then the longest name. Partial overlaps that
+ * are neither a subset ("tea towels" vs paper towels) are unknown. Null when nothing matches.
  */
 export function lookupPrice(name: string): { name: string; unitCents: number } | null {
-  const q = normalizeName(name);
-  if (!q) return null;
-  const qs = singular(q);
-  const keys = Object.keys(CATALOG);
-  const tiers: Array<(k: string) => boolean> = [
-    (k) => k === q || singular(k) === qs,
-    (k) => k.startsWith(q) || q.startsWith(k) || singular(k).startsWith(qs) || qs.startsWith(singular(k)),
-    (k) => k.includes(qs) || qs.includes(singular(k)),
+  const q = tokens(name);
+  if (q.size === 0) return null;
+  const head = [...q][q.size - 1];
+  const headIsCatalogWord = CATALOG_TOKENS.some((c) => c.toks.has(head));
+  const tiers: Array<(k: Set<string>) => boolean> = [
+    (k) => k.size === q.size && isSubset(k, q),
+    (k) => isSubset(k, q) && (!headIsCatalogWord || k.has(head)),
+    (k) => isSubset(q, k),
   ];
   for (const test of tiers) {
-    const hits = keys.filter(test).sort((a, b) => a.length - b.length || a.localeCompare(b));
-    if (hits[0]) return { name: hits[0], unitCents: CATALOG[hits[0]] };
+    const hits = CATALOG_TOKENS.filter((c) => test(c.toks)).sort(
+      (a, b) => overlap(b.toks, q) - overlap(a.toks, q) || b.key.length - a.key.length || a.key.localeCompare(b.key),
+    );
+    if (hits[0]) return { name: hits[0].key, unitCents: CATALOG[hits[0].key] };
   }
   return null;
 }
 
-/** Leading number in a free-text quantity: "3 bags" -> 3, "2" -> 2, "1.5 lb" -> 1.5, "a dozen" -> 1. Never < 1. */
+/** Units that mean "this many items". Anything else after the number (oz, lb, pack, dozen, ct, ...) is a size. */
+const COUNT_UNITS = new Set([
+  "bag", "bags", "box", "boxes", "bottle", "bottles", "can", "cans", "jar", "jars", "loaf", "loaves", "bunch", "bunches",
+  "head", "heads", "pc", "pcs", "piece", "pieces", "x", "unit", "units", "roll", "rolls",
+]);
+
+/**
+ * How many of the item a free-text quantity means. The leading number counts only when it is bare ("3") or
+ * followed by a count-like unit ("3 bags", "2 bottles of", "4x"). A number that sizes the item ("16 oz", "1.5 lb",
+ * "12 pack", "500 g", "1 dozen", "2 gallons") is one item. Never < 1.
+ */
 export function parseQty(qty: string | undefined | null): number {
-  const m = String(qty ?? "").trim().match(/^(\d+(?:\.\d+)?)/);
+  const m = String(qty ?? "").trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*([a-z]+)?/);
   if (!m) return 1;
   const n = Number(m[1]);
-  return Number.isFinite(n) && n >= 1 ? n : 1;
+  if (!Number.isFinite(n) || n < 1) return 1;
+  const unit = m[2];
+  if (unit && !COUNT_UNITS.has(unit)) return 1;
+  return n;
 }
 
-/** Estimated cents for `qty` of `name`: unit price (catalog or 499 default) x leading number in qty. */
+/** Estimated cents for `qty` of `name`: unit price (catalog or 499 default) x item count from parseQty. */
 export function estimate(name: string, qty?: string | null): number {
   const unit = lookupPrice(name)?.unitCents ?? DEFAULT_UNIT_CENTS;
   return Math.round(unit * parseQty(qty));

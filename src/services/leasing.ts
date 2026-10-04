@@ -8,10 +8,53 @@ import type { Ctx } from "./types";
 
 const { emails, households } = schema;
 
-export type InboundEmail = { from: string; to: string; subject: string; text: string; threadId?: string };
+export type InboundEmail = {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  threadId?: string;
+  /** When the mail provider says it arrived (webhook payload timestamp). Stored as createdAt so the poll recognises the row. */
+  receivedAt?: Date;
+};
 export type { MailThread, MailMessage } from "@/lib/agentmail";
 
 const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+
+/* ---------- dedupe: is this received message already in `emails`? ----------
+ * We don't store AgentMail's message id, and rows come from three writers: the webhook (createdAt = now, body = raw text),
+ * the poll and openThread (createdAt = message timestamp, body = extracted text). So a received message counts as stored
+ * when an `in` row in the same thread has the same timestamp, OR the same normalized subject+body (first 300 chars),
+ * OR the same normalized subject and a createdAt within 10 minutes AFTER the message timestamp (a webhook row). */
+
+type StoredRow = { createdAt: Date; subject: string; body: string };
+type ReceivedMsg = { at: Date; subject: string; text: string };
+
+const WEBHOOK_LAG_MS = 10 * 60 * 1000;
+const TEXT_KEY_CHARS = 300;
+
+const normText = (s: string | null | undefined) => (s ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+const textKey = (subject: string, body: string) => `${normText(subject)}\n${normText(body)}`.slice(0, TEXT_KEY_CHARS);
+
+export function isStoredEmail(stored: StoredRow[], m: ReceivedMsg): boolean {
+  const at = m.at.getTime();
+  const subj = normText(m.subject);
+  const key = textKey(m.subject, m.text);
+  return stored.some((r) => {
+    const rowAt = r.createdAt.getTime();
+    if (rowAt === at) return true;
+    if (textKey(r.subject, r.body) === key) return true;
+    return normText(r.subject) === subj && rowAt >= at && rowAt - at <= WEBHOOK_LAG_MS;
+  });
+}
+
+/** The `in` rows of one thread, for isStoredEmail(). */
+async function storedInThread(householdId: string, threadId: string): Promise<StoredRow[]> {
+  return db
+    .select({ createdAt: emails.createdAt, subject: emails.subject, body: emails.body })
+    .from(emails)
+    .where(and(eq(emails.householdId, householdId), eq(emails.threadId, threadId), eq(emails.direction, "in")));
+}
 
 async function addresses(householdId: string) {
   const house = await getHousehold(householdId);
@@ -45,7 +88,20 @@ export async function handleInboundEmail(email: InboundEmail): Promise<{ househo
     all.find((h) => norm(h.inboxAddress) === to) ??
     (norm(process.env.AGENTMAIL_INBOX) === to ? (all.find((h) => !h.inboxAddress) ?? all[0]) : undefined);
   if (!house) return null;
-  await db.insert(emails).values({ householdId: house.id, direction: "in", subject: email.subject, body: email.text, threadId: email.threadId });
+  const receivedAt = email.receivedAt && !Number.isNaN(email.receivedAt.getTime()) ? email.receivedAt : undefined;
+  if (email.threadId) {
+    // The poll (or an earlier delivery of this webhook) may have stored it already; don't insert or announce it twice.
+    const stored = await storedInThread(house.id, email.threadId);
+    if (isStoredEmail(stored, { at: receivedAt ?? new Date(), subject: email.subject, text: email.text })) return null;
+  }
+  await db.insert(emails).values({
+    householdId: house.id,
+    direction: "in",
+    subject: email.subject,
+    body: email.text,
+    threadId: email.threadId,
+    ...(receivedAt ? { createdAt: receivedAt } : {}),
+  });
   return { householdId: house.id, summary: summarize(email.subject, email.text) };
 }
 
@@ -82,15 +138,9 @@ export async function openThread(ctx: Pick<Ctx, "householdId">, threadId: string
   const messages = await mail.getThread(inbox, threadId);
   const unread = messages.filter((m) => m.unread).map((m) => m.messageId);
   if (unread.length) await mail.markRead(inbox, unread);
-  // The webhook may already have stored some of them. We don't store AgentMail's message id, so a received message counts
-  // as stored when a row in this thread has the same timestamp (rows we copied) or the same subject+body (rows the webhook wrote).
-  const stored = await db
-    .select({ createdAt: emails.createdAt, subject: emails.subject, body: emails.body })
-    .from(emails)
-    .where(and(eq(emails.householdId, ctx.householdId), eq(emails.threadId, threadId), eq(emails.direction, "in")));
-  const seenAt = new Set(stored.map((r) => r.createdAt.getTime()));
-  const seenText = new Set(stored.map((r) => `${r.subject}\n${r.body}`));
-  const missing = messages.filter((m) => !m.sent && !seenAt.has(m.at.getTime()) && !seenText.has(`${m.subject}\n${m.text}`));
+  // The webhook or the poll may already have stored some of them (see isStoredEmail for the matching rules).
+  const stored = await storedInThread(ctx.householdId, threadId);
+  const missing = messages.filter((m) => !m.sent && !isStoredEmail(stored, m));
   if (missing.length) {
     await db.insert(emails).values(missing.map((m) => ({ householdId: ctx.householdId, direction: "in" as const, subject: m.subject, body: m.text, threadId, createdAt: m.at })));
   }
@@ -153,10 +203,10 @@ const gist = (text: string, max = 200) => {
 
 // ---- Scheduler poll: new mail from the office -> group chat. Marks nothing read (the dashboard badge keeps counting).
 
-type PollState = { lastPolledAt: Map<string, Date>; seenThreadAt: Map<string, number> }; // householdId -> ..., `${householdId}:${threadId}` -> thread.at
+type PollState = { seenThreadAt: Map<string, number> }; // `${householdId}:${threadId}` -> thread.at when we last looked
 function pollState(): PollState {
   const g = globalThis as { __kevinMailPollState?: PollState };
-  return (g.__kevinMailPollState ??= { lastPolledAt: new Map(), seenThreadAt: new Map() });
+  return (g.__kevinMailPollState ??= { seenThreadAt: new Map() });
 }
 
 /**
@@ -178,21 +228,13 @@ export async function pollInbox(householdId: string): Promise<{ summary: string;
     }
     if (s.seenThreadAt.get(key) === t.at.getTime()) continue; // unchanged since we last looked
     const messages = await mail.getThread(inbox, t.threadId);
-    const stored = await db
-      .select({ createdAt: emails.createdAt, subject: emails.subject, body: emails.body })
-      .from(emails)
-      .where(and(eq(emails.householdId, householdId), eq(emails.threadId, t.threadId), eq(emails.direction, "in")));
-    const seenAt = new Set(stored.map((r) => r.createdAt.getTime()));
-    const seenText = new Set(stored.map((r) => `${r.subject}\n${r.body}`));
-    const fresh = messages
-      .filter((m) => !m.sent && !seenAt.has(m.at.getTime()) && !seenText.has(`${m.subject}\n${m.text}`))
-      .sort((a, b) => a.at.getTime() - b.at.getTime());
+    const stored = await storedInThread(householdId, t.threadId);
+    const fresh = messages.filter((m) => !m.sent && !isStoredEmail(stored, m)).sort((a, b) => a.at.getTime() - b.at.getTime());
     if (fresh.length) {
       await db.insert(emails).values(fresh.map((m) => ({ householdId, direction: "in" as const, subject: m.subject, body: m.text, threadId: t.threadId, createdAt: m.at })));
       for (const m of fresh) out.push({ threadId: t.threadId, summary: `📬 Leasing office replied — ${summarize(m.subject, m.text)}` });
     }
     s.seenThreadAt.set(key, t.at.getTime());
   }
-  s.lastPolledAt.set(householdId, new Date());
   return out;
 }

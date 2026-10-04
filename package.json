@@ -17,7 +17,6 @@
     "kevin:smoke": "tsx --env-file=.env scripts/kevin-smoke.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.124",
     "@mastra/core": "^1.74.0",
     "@mastra/memory": "^1.35.0",
     "@mastra/pg": "^1.29.0",

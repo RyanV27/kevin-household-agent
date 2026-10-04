@@ -26,7 +26,7 @@ export const cartTools = (ctx: Ctx, outbox: ToolOutbox) => ({
   cart_add: createTool({
     id: "cart_add",
     description:
-      "Add grocery items to the shared cart, attributed to the sender ('add 3 bags of chips for me' -> one item, name 'chips', qty '3 bags'). shared=true for household items (toilet paper, dish soap). View-cart and Checkout buttons are attached automatically; don't paste URLs.",
+      "Add grocery items to the shared cart, attributed to the sender ('add 3 bags of chips for me' -> one item, name 'chips', qty '3 bags'). shared=true for household items (toilet paper, dish soap). Returns addedTotal (just these items) and cartTotal (the whole open cart). View-cart and Checkout buttons are attached automatically; don't paste URLs.",
     inputSchema: z.object({
       items: z
         .array(
@@ -41,8 +41,17 @@ export const cartTools = (ctx: Ctx, outbox: ToolOutbox) => ({
     execute: async (input) => {
       const items = await cart.addItems(ctx, input);
       pushButtons(outbox, ["view", "checkout"]);
-      const estTotalCents = cart.cartTotal(items);
-      return { items, estTotalCents, estTotal: dollars(estTotalCents) };
+      const open = await cart.listOpenItems(ctx);
+      const addedTotalCents = cart.cartTotal(items);
+      const cartTotalCents = cart.cartTotal(open);
+      return {
+        items,
+        addedTotalCents,
+        addedTotal: dollars(addedTotalCents),
+        cartItemCount: open.length,
+        cartTotalCents,
+        cartTotal: dollars(cartTotalCents),
+      };
     },
   }),
   cart_remove: createTool({
@@ -70,10 +79,12 @@ export const cartTools = (ctx: Ctx, outbox: ToolOutbox) => ({
     inputSchema: z.object({}),
     execute: async () => {
       const res = await cart.checkout(ctx);
+      // Telegram needs an absolute link; res.url is relative when APP_URL is unset. Same dedupe as the other tools.
       const linkAttached = isAbsoluteUrl(res.url);
-      if (res.url && linkAttached) outbox.buttons.push({ text: "Checkout", url: res.url });
+      if (linkAttached) pushButtons(outbox, ["checkout"]);
       const estTotalCents = cart.cartTotal(res.items);
-      return { url: res.url, items: res.items, itemCount: res.items.length, estTotalCents, estTotal: dollars(estTotalCents), linkAttached };
+      // No url in the result on purpose: the model must not paste it; the button carries the link.
+      return { items: res.items, itemCount: res.items.length, estTotalCents, estTotal: dollars(estTotalCents), linkAttached };
     },
   }),
   cart_purchased: createTool({

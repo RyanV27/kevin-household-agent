@@ -6,8 +6,10 @@
 // Resolves the house: KEVIN_HOUSEHOLD_ID, else the household named "Apt 4B", else the first by created_at,
 // else creates "Apt 4B" with Sudhersan, Ryan and Alex. --reset keeps the household row, members (and their
 // Telegram links) and the `emails` table (real AgentMail history); everything else for this house is rebuilt.
+// TELEGRAM_CHAT_ID binds the group: always on create, and on an existing house when --reset or it has no chat yet.
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "../src/db";
+import { estimate } from "../src/lib/prices";
 import { money, chores as choresSvc, reminders as remindersSvc, upkeep } from "../src/services";
 import { dollars, type Ctx } from "../src/services/types";
 
@@ -72,17 +74,32 @@ function nextWeekday(weekday: number, h: number, mi = 0): Date {
 
 /* ---------- resolve the house ---------- */
 
-async function resolveHouse() {
+type House = typeof households.$inferSelect;
+
+/** Bind TELEGRAM_CHAT_ID to an existing house when --reset, or when it has no group yet. Unchanged otherwise. */
+async function bindChat(h: House): Promise<House> {
+  const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
+  if (!chatId || h.telegramChatId === chatId) return h;
+  if (!RESET && h.telegramChatId) {
+    console.log(`"${h.name}" keeps telegram chat ${h.telegramChatId} (pass --reset to rebind to TELEGRAM_CHAT_ID)`);
+    return h;
+  }
+  const [updated] = await db.update(households).set({ telegramChatId: chatId }).where(eq(households.id, h.id)).returning();
+  console.log(`bound "${h.name}" to telegram chat ${chatId}${h.telegramChatId ? ` (was ${h.telegramChatId})` : ""}`);
+  return updated;
+}
+
+async function resolveHouse(): Promise<House> {
   const envId = process.env.KEVIN_HOUSEHOLD_ID;
   if (envId) {
     const [h] = await db.select().from(households).where(eq(households.id, envId));
     if (!h) throw new Error(`KEVIN_HOUSEHOLD_ID=${envId} does not exist.`);
-    return h;
+    return bindChat(h);
   }
   const [named] = await db.select().from(households).where(eq(households.name, HOUSE_NAME)).orderBy(asc(households.createdAt)).limit(1);
-  if (named) return named;
+  if (named) return bindChat(named);
   const [first] = await db.select().from(households).orderBy(asc(households.createdAt)).limit(1);
-  if (first) return first;
+  if (first) return bindChat(first);
   const [created] = await db
     .insert(households)
     .values({
@@ -98,16 +115,23 @@ async function resolveHouse() {
   return created;
 }
 
-/** Sudhersan, Ryan, Alex by name; any missing one is added. Existing rows (and telegram links) are untouched. */
+/**
+ * Sudhersan, Ryan, Alex by name (case-insensitive, active or not). A missing one is added; an inactive one is reactivated
+ * rather than duplicated. Existing rows (and telegram links) are otherwise untouched.
+ */
 async function resolveMembers(householdId: string) {
   const want = ["Sudhersan", "Ryan", "Alex"] as const;
-  const have = await db.select().from(members).where(and(eq(members.householdId, householdId), eq(members.active, true)));
+  const have = await db.select().from(members).where(eq(members.householdId, householdId)).orderBy(asc(members.createdAt));
   const out = {} as Record<(typeof want)[number], string>;
   for (const name of want) {
-    let m = have.find((x) => x.name.toLowerCase() === name.toLowerCase());
+    const same = have.filter((x) => x.name.toLowerCase() === name.toLowerCase());
+    let m = same.find((x) => x.active) ?? same[0];
     if (!m) {
       [m] = await db.insert(members).values({ householdId, name }).returning();
       console.log(`added member ${name}`);
+    } else if (!m.active) {
+      await db.update(members).set({ active: true }).where(eq(members.id, m.id));
+      console.log(`reactivated member ${m.name}`);
     }
     out[name] = m.id;
   }
@@ -212,13 +236,12 @@ await db.transaction(async (tx) => {
     { householdId: hid, text: "Venmo Sudhersan for pizza", dueAt: localAt(1, 18, 0), memberId: A },
   ]);
 
-  /* ----- cart (open) ----- */
-  const est = await priceEstimator();
+  /* ----- cart (open); estimates from the price table so the seed matches what cart_add would compute ----- */
   await tx.insert(cartItems).values([
-    { householdId: hid, name: "tortilla chips", qty: "3 bags", addedBy: S, shared: false, estCents: est("tortilla chips", "3 bags", 1_197), createdAt: ago(1, 4) },
-    { householdId: hid, name: "oat milk", qty: "1", addedBy: R, shared: false, estCents: est("oat milk", "1", 449), createdAt: ago(1, 2) },
-    { householdId: hid, name: "paper towels", qty: "1", addedBy: S, shared: true, estCents: est("paper towels", "1", 1_299), createdAt: ago(0, 20) },
-    { householdId: hid, name: "eggs", qty: "1 dozen", addedBy: A, shared: false, estCents: est("eggs", "1 dozen", 429), createdAt: ago(0, 6) },
+    { householdId: hid, name: "tortilla chips", qty: "3 bags", addedBy: S, shared: false, estCents: estimate("tortilla chips", "3 bags"), createdAt: ago(1, 4) },
+    { householdId: hid, name: "oat milk", qty: "1", addedBy: R, shared: false, estCents: estimate("oat milk", "1"), createdAt: ago(1, 2) },
+    { householdId: hid, name: "paper towels", qty: "1", addedBy: S, shared: true, estCents: estimate("paper towels", "1"), createdAt: ago(0, 20) },
+    { householdId: hid, name: "eggs", qty: "1 dozen", addedBy: A, shared: false, estCents: estimate("eggs", "1 dozen"), createdAt: ago(0, 6) },
   ]);
 
   /* ----- group chatter, last 48h. memberId null = Kevin. ----- */
@@ -257,28 +280,6 @@ const lastDone: Record<string, Date | null> = {
 };
 for (const [item, when] of Object.entries(lastDone)) {
   await db.update(maintenance).set({ lastDone: when }).where(and(eq(maintenance.householdId, hid), eq(maintenance.item, item)));
-}
-
-/* ---------- optional price table: src/lib/prices.ts may exist by the time this runs ---------- */
-async function priceEstimator(): Promise<(name: string, qty: string, fallback: number) => number> {
-  try {
-    const mod: any = await import("../src/lib/" + "prices"); // computed specifier: tsc won't require the file
-    const fn = mod?.estimate;
-    if (typeof fn === "function") {
-      return (name, qty, fallback) => {
-        try {
-          const v = fn(name, qty);
-          const cents = typeof v === "number" ? v : v?.cents ?? v?.estCents;
-          return Number.isInteger(cents) && cents > 0 ? cents : fallback;
-        } catch {
-          return fallback;
-        }
-      };
-    }
-  } catch {
-    /* no price table yet; use the hardcoded guesses */
-  }
-  return (_n, _q, fallback) => fallback;
 }
 
 /* ---------- summary ---------- */

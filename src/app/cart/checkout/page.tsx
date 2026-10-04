@@ -6,11 +6,18 @@ import { redirect } from "next/navigation";
 import { dashboardCtx } from "@/lib/dashboard";
 import { cart, members } from "@/services";
 import { dollars } from "@/services/types";
+import { DEFAULT_UNIT_CENTS } from "@/lib/prices";
 import { Empty, NoHousehold, PageHead } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 const STORES = ["Kevin's Market", "Mart of Shame", "Buzz's Bodega", "Little Nero's Pantry"];
+
+/** What the order charges: the catalog estimate, or the default unit price per item when nothing is priced. */
+const orderTotal = (items: { estCents: number | null }[]) => {
+  const total = cart.cartTotal(items);
+  return total > 0 ? total : items.length * DEFAULT_UNIT_CENTS;
+};
 
 async function placeOrder(form: FormData) {
   "use server";
@@ -18,8 +25,7 @@ async function placeOrder(form: FormData) {
   if (!ctx) return;
   const items = await cart.listOpenItems(ctx);
   if (items.length === 0) redirect("/cart");
-  const total = cart.cartTotal(items);
-  await cart.markPurchased(ctx, { totalCents: total > 0 ? total : items.length * 499, payerId: String(form.get("payerId") || ctx.actorId) });
+  await cart.markPurchased(ctx, { totalCents: orderTotal(items), payerId: String(form.get("payerId") || ctx.actorId) });
   revalidatePath("/", "layout");
   redirect("/money");
 }
@@ -28,8 +34,19 @@ export default async function CheckoutPage() {
   const ctx = await dashboardCtx();
   if (!ctx) return <NoHousehold />;
   const [items, people] = await Promise.all([cart.listOpenItems(ctx), members.listMembers(ctx)]);
-  const total = cart.cartTotal(items);
+  const total = orderTotal(items);
   const actor = people.find((m) => m.id === ctx.actorId);
+  // Same split the order will log (payer = the person acting; only remainder cents depend on who pays).
+  const nameOf = new Map(people.map((m) => [m.id, m.name]));
+  const ownCount = new Map<string, number>();
+  for (const i of items) if (!i.shared && i.addedBy) ownCount.set(i.addedBy, (ownCount.get(i.addedBy) ?? 0) + 1);
+  const hasShared = items.some((i) => i.shared || !nameOf.has(i.addedBy ?? ""));
+  const preview = cart.computeCartSplits(
+    items.map((i) => ({ addedBy: i.addedBy ?? "", shared: i.shared, estCents: i.estCents })),
+    people.map((m) => m.id),
+    total,
+    ctx.actorId,
+  );
 
   return (
     <main>
@@ -113,19 +130,17 @@ export default async function CheckoutPage() {
           <section className="card">
             <h2>Who owes what</h2>
             <ul className="list">
-              {people.map((m) => {
-                const mine = items.filter((i) => !i.shared && i.addedBy === m.id);
-                const sharedCents = cart.cartTotal(items.filter((i) => i.shared));
-                const share = Math.round(sharedCents / Math.max(1, people.length));
+              {preview.map((row) => {
+                const n = ownCount.get(row.memberId) ?? 0;
                 return (
-                  <li key={m.id}>
-                    <b>{m.name}</b>
+                  <li key={row.memberId}>
+                    <b>{nameOf.get(row.memberId) ?? "Someone"}</b>
                     <span className="muted">
-                      {mine.length} item{mine.length === 1 ? "" : "s"}
-                      {sharedCents > 0 && <> + shared</>}
+                      {n} item{n === 1 ? "" : "s"}
+                      {hasShared && <> + shared</>}
                     </span>
                     <span className="spacer" />
-                    <span className="num">≈ {dollars(cart.cartTotal(mine) + share)}</span>
+                    <span className="num">{dollars(row.cents)}</span>
                   </li>
                 );
               })}

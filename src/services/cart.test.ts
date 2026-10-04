@@ -19,36 +19,83 @@ test("catalog has ~60+ items with positive integer prices", () => {
   }
 });
 
-test("lookupPrice: exact, then startsWith, then includes; case and spacing don't matter", () => {
+test("lookupPrice: exact, then catalog-in-query, then query-in-catalog; case and spacing don't matter", () => {
   assert.equal(lookupPrice("milk")?.name, "milk");
   assert.equal(lookupPrice("  MILK ")?.name, "milk");
   assert.equal(lookupPrice("oat milk")?.name, "oat milk");
-  assert.equal(lookupPrice("sparkling")?.name, "sparkling water", "startsWith");
-  assert.equal(lookupPrice("oat")?.name, "oatmeal", "startsWith: shortest catalog name wins");
-  assert.equal(lookupPrice("toilet")?.name, "toilet paper", "startsWith");
-  assert.equal(lookupPrice("whole milk")?.name, "milk", "includes");
-  assert.equal(lookupPrice("bag of chips")?.name, "chips", "includes");
+  assert.equal(lookupPrice("sparkling")?.name, "sparkling water", "query token inside a catalog name");
+  assert.equal(lookupPrice("oat")?.name, "oat milk", "whole words: 'oat' is not a prefix of 'oatmeal' any more");
+  assert.equal(lookupPrice("toilet")?.name, "toilet paper");
+  assert.equal(lookupPrice("whole milk")?.name, "milk", "catalog name inside the query");
+  assert.equal(lookupPrice("bag of chips")?.name, "chips");
   assert.equal(lookupPrice("egg")?.name, "eggs", "plural-insensitive");
+  assert.equal(lookupPrice("Bagel")?.name, "bagels");
   assert.equal(lookupPrice("caviar"), null);
   assert.equal(lookupPrice(""), null);
 });
 
-test("parseQty: leading number, default 1", () => {
+test("lookupPrice: whole-word matching, most matching tokens first, then the longest catalog name", () => {
+  // Substring snaps the old code made: pepper, butter, salt, tea, rice.
+  assert.equal(lookupPrice("pepperoni pizza")?.name, "pizza");
+  assert.equal(lookupPrice("butternut squash"), null, "'butter' is not a word of 'butternut'");
+  assert.equal(lookupPrice("salted peanuts")?.name, "peanuts");
+  assert.equal(lookupPrice("tea towels"), null, "'towels' is the thing; tea is only the modifier and paper towels isn't a subset");
+  assert.equal(lookupPrice("rice cakes")?.name, "rice cakes");
+  assert.equal(lookupPrice("rice cake")?.name, "rice cakes");
+  // The last word decides when it is a catalog word.
+  assert.equal(lookupPrice("chocolate milk")?.name, "milk");
+  assert.equal(lookupPrice("milk chocolate")?.name, "chocolate");
+  assert.equal(lookupPrice("peanut butter cookies")?.name, "cookies");
+  assert.equal(lookupPrice("oat milk and cookies")?.name, "cookies");
+  // Otherwise most matching tokens wins over a shorter name.
+  assert.equal(lookupPrice("chicken thighs")?.name, "chicken");
+  assert.equal(lookupPrice("frozen pizza rolls")?.name, "frozen pizza");
+  assert.equal(lookupPrice("greek yogurt cups")?.name, "greek yogurt");
+  assert.equal(lookupPrice("sparkling water bottles")?.name, "sparkling water");
+  // Same count -> the longest catalog name ("cream" is in both "ice cream" and "cream cheese").
+  assert.equal(lookupPrice("cream")?.name, "cream cheese");
+  assert.equal(lookupPrice("All Purpose Cleaner")?.name, "all-purpose cleaner", "punctuation in the catalog name is ignored");
+});
+
+test("parseQty: a bare number or a count-like unit is a count; size units mean one item", () => {
   assert.equal(parseQty("3 bags"), 3);
+  assert.equal(parseQty("3 bags of chips"), 3);
   assert.equal(parseQty("2"), 2);
+  assert.equal(parseQty("2 bottles"), 2);
+  assert.equal(parseQty("6 cans"), 6);
+  assert.equal(parseQty("2 loaves"), 2);
+  assert.equal(parseQty("4 x"), 4);
+  assert.equal(parseQty("4x"), 4);
+  assert.equal(parseQty("2 pcs"), 2);
+  assert.equal(parseQty("3 rolls"), 3);
+  // Sizes, not counts.
+  assert.equal(parseQty("16 oz"), 1);
+  assert.equal(parseQty("1.5 lb"), 1);
+  assert.equal(parseQty("2 lbs"), 1);
+  assert.equal(parseQty("500 g"), 1);
+  assert.equal(parseQty("500g"), 1);
+  assert.equal(parseQty("12 pack"), 1);
+  assert.equal(parseQty("12 ct"), 1);
+  assert.equal(parseQty("1 dozen"), 1);
+  assert.equal(parseQty("2 dozen"), 1);
+  assert.equal(parseQty("2 gallons"), 1);
   assert.equal(parseQty("1 gallon"), 1);
-  assert.equal(parseQty("1.5 lb"), 1.5);
+  assert.equal(parseQty("2 liters"), 1);
   assert.equal(parseQty("a dozen"), 1);
   assert.equal(parseQty(undefined), 1);
   assert.equal(parseQty("0"), 1, "never below 1");
 });
 
-test("estimate: unit price x qty; unknown items default to 499", () => {
+test("estimate: unit price x count; unknown items default to 499; sizes don't multiply", () => {
   assert.equal(estimate("chips", "3 bags"), 3 * CATALOG.chips);
   assert.equal(estimate("milk"), CATALOG.milk);
   assert.equal(estimate("Dish Soap", "2"), 2 * CATALOG["dish soap"]);
   assert.equal(estimate("caviar"), DEFAULT_UNIT_CENTS);
-  assert.equal(estimate("caviar", "4 tins"), 4 * DEFAULT_UNIT_CENTS);
+  assert.equal(estimate("caviar", "4 jars"), 4 * DEFAULT_UNIT_CENTS);
+  assert.equal(estimate("chicken", "16 oz"), CATALOG.chicken, "16 oz is one chicken, not sixteen");
+  assert.equal(estimate("soda", "12 pack"), CATALOG.soda);
+  assert.equal(estimate("rice", "500 g"), CATALOG.rice);
+  assert.equal(estimate("eggs", "1 dozen"), CATALOG.eggs);
   assert.ok(Number.isInteger(estimate("milk", "1.5")));
 });
 

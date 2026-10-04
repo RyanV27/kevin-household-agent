@@ -231,7 +231,10 @@ describe("Kevin tools against the dev DB", () => {
   test("log_chore: an unknown chore is added to the chart (every 7 days)", async () => {
     const r: { chore: string } = await run("log_chore", { chore: "watered the plants" });
     assert.equal(r.chore, "watered the plants");
-    const [c] = await db.select().from(schema.chores).where(eq(schema.chores.name, "watered the plants"));
+    const [c] = await db
+      .select()
+      .from(schema.chores)
+      .where(and(eq(schema.chores.householdId, householdId), eq(schema.chores.name, "watered the plants")));
     assert.equal(c.householdId, householdId);
     assert.equal(c.everyDays, 7);
   });
@@ -360,14 +363,22 @@ describe("Kevin tools against the dev DB", () => {
     assert.equal(await count(schema.emails), 0, "nothing logged to emails");
   });
 
+  // Inbox buttons only exist with an absolute APP_URL (Telegram drops a reply whose button URL is relative).
+  const inboxBase = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
+  const expectInboxButton = (threadId?: string) => {
+    if (!/^https?:\/\//i.test(inboxBase)) return assert.equal(outbox.buttons.length, 0, "no APP_URL -> no button (never a relative URL)");
+    assert.equal(outbox.buttons.length, 1);
+    assert.equal(outbox.buttons[0].url, `${inboxBase}/inbox${threadId ? `?thread=${encodeURIComponent(threadId)}` : ""}`);
+    assert.match(outbox.buttons[0].url, /^https?:\/\/[^/]+\/inbox/, "absolute, single slash before /inbox");
+  };
+
   test("leasing_status: { threads: [] } without AGENTMAIL_API_KEY; with it, a threads array + the inbox button", async (t) => {
     const saved = process.env.AGENTMAIL_API_KEY;
     process.env.AGENTMAIL_API_KEY = "";
     try {
       outbox.buttons.length = 0;
       assert.deepEqual(await run("leasing_status", {}), { threads: [] });
-      assert.equal(outbox.buttons.length, 1);
-      assert.match(outbox.buttons[0].url, /\/inbox$/, "no thread -> plain /inbox link");
+      expectInboxButton();
     } finally {
       if (saved === undefined) delete process.env.AGENTMAIL_API_KEY;
       else process.env.AGENTMAIL_API_KEY = saved;
@@ -382,14 +393,13 @@ describe("Kevin tools against the dev DB", () => {
       assert.equal(typeof th.unread, "boolean");
       assert.ok(th.messageCount >= 1);
     }
-    assert.equal(outbox.buttons.length, 1);
-    if (r.threads.length) assert.match(outbox.buttons[0].url, new RegExp(`/inbox\\?thread=${encodeURIComponent(r.threads[0].threadId)}$`));
+    expectInboxButton(r.threads[0]?.threadId);
     assert.equal(await count(schema.emails), 0, "status is read-only");
   });
 
   // ---------- cart (simulated store: estimates from lib/prices, checkout at /cart/checkout) ----------
 
-  type CartAdd = { items: CartItem[]; estTotalCents: number; estTotal: string };
+  type CartAdd = { items: CartItem[]; addedTotalCents: number; addedTotal: string; cartItemCount: number; cartTotalCents: number; cartTotal: string };
   type CartView = { groups: Record<string, CartItem[]>; itemCount: number; estTotalCents: number; estTotal: string };
   const appUrl = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
 
@@ -401,7 +411,10 @@ describe("Kevin tools against the dev DB", () => {
     assert.equal(added.items[0].qty, "3 bags");
     assert.equal(added.items[0].addedByName, "Sudhersan");
     assert.equal(added.items[0].estCents, 3 * 449, "3 x catalog price of chips");
-    assert.equal(added.estTotalCents, 3 * 449);
+    assert.equal(added.addedTotalCents, 3 * 449, "total of the items just added");
+    assert.equal(added.addedTotal, "$13.47");
+    assert.equal(added.cartTotalCents, 3 * 449, "first add into an empty cart: cart total = added total");
+    assert.equal(added.cartItemCount, 1);
     if (appUrl) {
       assert.deepEqual(
         outbox.buttons.map((b) => b.url).sort(),
@@ -414,7 +427,10 @@ describe("Kevin tools against the dev DB", () => {
       assert.equal(outbox.buttons.length, 0, "no APP_URL -> no buttons");
     }
 
-    await run("cart_add", { items: [{ name: "dish soap" }], shared: true });
+    const second: CartAdd = await run("cart_add", { items: [{ name: "dish soap" }], shared: true });
+    assert.equal(second.addedTotalCents, 349, "addedTotal is only the new item");
+    assert.equal(second.cartTotalCents, 1347 + 349, "cartTotal is the whole open cart");
+    assert.equal(second.cartItemCount, 2);
     const rows = await db.select().from(schema.cartItems).where(eq(schema.cartItems.householdId, householdId));
     assert.equal(rows.length, 2);
     const chips = rows.find((r) => r.name === "chips");
@@ -451,14 +467,16 @@ describe("Kevin tools against the dev DB", () => {
 
   test("cart_checkout links to the simulated store and attaches the Checkout button via the outbox", async (t) => {
     outbox.buttons.length = 0;
-    const r: { url: string | null; itemCount: number; linkAttached: boolean } = await run("cart_checkout", {});
+    const r: { itemCount: number; linkAttached: boolean; url?: unknown } = await run("cart_checkout", {});
     assert.equal(r.itemCount, 2);
-    assert.match(r.url ?? "", /\/cart\/checkout$/, "our own checkout page, never a third-party store");
+    assert.ok(!("url" in r), "no url in the tool result: the model must not paste links, the button carries it");
     if (r.linkAttached) {
       assert.equal(outbox.buttons.length, 1);
       assert.equal(outbox.buttons[0].text, "Checkout");
-      assert.equal(outbox.buttons[0].url, `${appUrl}/cart/checkout`);
+      assert.equal(outbox.buttons[0].url, `${appUrl}/cart/checkout`, "our own checkout page, never a third-party store");
       assert.match(outbox.buttons[0].url ?? "", /^https?:\/\//);
+      await run("cart_checkout", {});
+      assert.equal(outbox.buttons.length, 1, "calling it twice does not duplicate the button");
     } else {
       assert.equal(outbox.buttons.length, 0);
       t.diagnostic("APP_URL not set; checkout button not attached");
@@ -501,6 +519,26 @@ describe("Kevin tools against the dev DB", () => {
     );
     await assert.rejects(run("cart_purchased", { total: 5 }), /cart is empty/i);
     await assert.rejects(run("cart_purchased", { total: 5, payer: "Buzz" }), /No roommate named "Buzz"/);
+  });
+
+  test("cart_purchased: a double-click charges once; a failed purchase leaves the items open", async () => {
+    await run("cart_add", { items: [{ name: "bread" }] });
+    const before = await count(schema.expenses);
+    const [first, second] = await Promise.allSettled([run("cart_purchased", { total: 4 }), run("cart_purchased", { total: 4 })]);
+    const ok = [first, second].filter((r) => r.status === "fulfilled");
+    const failed = [first, second].filter((r) => r.status === "rejected");
+    assert.equal(ok.length, 1, "exactly one of two concurrent purchases wins");
+    assert.equal(failed.length, 1);
+    assert.match(String((failed[0] as PromiseRejectedResult).reason), /cart is empty/i);
+    assert.equal(await count(schema.expenses), before + 1, "one expense, not two");
+    // A purchase whose expense can't be logged (payer not an active roommate) must roll the items back to open.
+    await run("cart_add", { items: [{ name: "bagels" }] });
+    const cartService = await import("@/services/cart");
+    await assert.rejects(cartService.markPurchased({ ...ctx, actorId: "00000000-0000-0000-0000-000000000000" }, { totalCents: 400 }), /who paid/i);
+    const open = await db.select().from(schema.cartItems).where(eq(schema.cartItems.householdId, householdId));
+    assert.deepEqual(open.filter((r) => r.status === "open").map((r) => r.name), ["bagels"], "items stay open after a failed purchase");
+    assert.equal(await count(schema.expenses), before + 1);
+    await run("cart_purchased", { total: 4 });
   });
 
   // ---------- coverage ----------

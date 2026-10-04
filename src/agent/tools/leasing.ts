@@ -4,13 +4,13 @@ import { z } from "zod";
 import { leasing } from "@/services";
 import type { Ctx } from "@/services/types";
 import type { ToolOutbox } from "./index";
-
-const inboxUrl = (threadId?: string | null) => `${process.env.APP_URL ?? ""}/inbox${threadId ? `?thread=${encodeURIComponent(threadId)}` : ""}`;
+import { inboxUrl } from "./util";
 
 export const leasingTools = (ctx: Ctx, outbox: ToolOutbox) => {
+  /** Attach the inbox button only when APP_URL gives an absolute link (Telegram drops replies with relative button URLs). */
   const inboxButton = (threadId?: string | null) => {
     const url = inboxUrl(threadId);
-    if (!outbox.buttons.some((b) => b.url === url)) outbox.buttons.push({ text: "📬 Open inbox", url });
+    if (url && !outbox.buttons.some((b) => b.url === url)) outbox.buttons.push({ text: "📬 Open inbox", url });
   };
   return {
     create_work_order: createTool({

@@ -9,6 +9,7 @@ import { dueReminders, markSent, type Reminder } from "@/services/reminders";
 import { dueMaintenance } from "@/services/upkeep";
 import { formatKevinReport, kevinReport, localParts, shouldPostUpkeepNudge, shouldPostWeeklyReport } from "@/services/report";
 import { pollInbox } from "@/services/leasing";
+import { inboxUrl } from "@/agent/tools/util";
 
 const TICK_MS = 60_000;
 const MAX_SEND_ATTEMPTS = 3;
@@ -143,7 +144,9 @@ export async function pollMailOnce(householdId: string): Promise<{ summary: stri
       break;
     }
     try {
-      await telegram.send(householdId, { text: m.summary, buttons: [{ text: "📬 Open inbox", url: `${process.env.APP_URL ?? ""}/inbox?thread=${encodeURIComponent(m.threadId)}` }] });
+      // Button only with an absolute APP_URL: Telegram rejects relative button URLs and drops the whole message.
+      const url = inboxUrl(m.threadId);
+      await telegram.send(householdId, { text: m.summary, ...(url ? { buttons: [{ text: "📬 Open inbox", url }] } : {}) });
     } catch (e) {
       console.error(`scheduler: mail notification send failed for household ${householdId}`, e);
     }

@@ -1,7 +1,7 @@
 // P2 · Shared grocery cart. Items are attributed to whoever added them; purchase logs ONE expense split by who
 // added what (weighted by estCents, shared items split evenly across active roommates).
 // computeCartSplits and cartTotal are pure and unit-tested in cart.test.ts without a DB.
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { estimate } from "@/lib/prices";
 import { createShoppingList } from "@/lib/instacart";
@@ -154,6 +154,17 @@ export async function removeItem(ctx: Ctx, input: { name: string }): Promise<boo
   return true;
 }
 
+/** Remove one open item by id. Household-scoped, so a stale or foreign id can't touch another house's cart. */
+export async function removeItemById(ctx: Pick<Ctx, "householdId">, input: { id: string }): Promise<boolean> {
+  const id = input.id.trim();
+  if (!id) return false;
+  const gone = await db
+    .delete(cartItems)
+    .where(and(eq(cartItems.id, id), eq(cartItems.householdId, ctx.householdId), eq(cartItems.status, "open")))
+    .returning({ id: cartItems.id });
+  return gone.length > 0;
+}
+
 /** Open items grouped by who added them ("Shared" for shared items). Shared group last. */
 export async function viewCart(ctx: Pick<Ctx, "householdId">): Promise<Record<string, CartItem[]>> {
   const items = await listOpenItems(ctx);
@@ -176,31 +187,48 @@ export async function checkout(ctx: Pick<Ctx, "householdId">): Promise<{ url: st
   return { url, items };
 }
 
-/** Payer bought the cart: one expense, split by who added what (weighted by estCents), shared split evenly. */
+/**
+ * Payer bought the cart: one expense, split by who added what (weighted by estCents), shared split evenly.
+ *
+ * Atomic against retries and double-clicks. Inside one transaction the open items are flipped to "purchased"
+ * FIRST (`UPDATE ... WHERE status = 'open' RETURNING *`); the rows that came back are the only items this purchase
+ * may charge for, and zero rows means someone else already bought it (or the cart is empty), so we throw and the
+ * second click fails cleanly. Only then is the expense written through money.logExpense, which stays the single
+ * writer of expenses. If logExpense throws (bad payer, bad splits, DB error) the surrounding transaction rolls the
+ * UPDATE back and the items stay open. A concurrent call blocks on the row locks until the first one commits, then
+ * its UPDATE sees status = "purchased" and matches nothing.
+ *
+ * Trade-off: logExpense runs its own transaction on a second connection, so the one remaining window is the outer
+ * commit failing after the expense committed; items would stay open with an expense logged, which is visible and
+ * fixable, unlike the old double charge.
+ */
 export async function markPurchased(ctx: Ctx, input: { totalCents: number; payerId?: string }): Promise<Expense> {
   if (!Number.isInteger(input.totalCents) || input.totalCents <= 0) {
     throw new Error("The grocery total has to be more than $0.00 (whole cents).");
   }
-  const items = await listOpenItems(ctx);
-  if (items.length === 0) throw new Error("The cart is empty, so there's nothing to mark purchased. Add items first ('Kevin, add milk').");
-  const people = await listMembers(ctx);
   const payerId = input.payerId ?? ctx.actorId;
-  const splits = computeCartSplits(
-    items.map((i) => ({ addedBy: i.addedBy!, shared: i.shared, estCents: i.estCents })),
-    people.map((m) => m.id),
-    input.totalCents,
-    payerId,
-  );
-  const expense = await logExpense(ctx, {
-    payerId,
-    cents: input.totalCents,
-    description: `Groceries (${items.length} item${items.length === 1 ? "" : "s"})`,
-    splits,
-    source: "cart",
+  return db.transaction(async (tx) => {
+    const items = await tx
+      .update(cartItems)
+      .set({ status: "purchased" })
+      .where(and(eq(cartItems.householdId, ctx.householdId), eq(cartItems.status, "open")))
+      .returning();
+    if (items.length === 0) {
+      throw new Error("The cart is empty, so there's nothing to mark purchased. Add items first ('Kevin, add milk').");
+    }
+    const people = await listMembers(ctx);
+    const splits = computeCartSplits(
+      items.map((i) => ({ addedBy: i.addedBy, shared: i.shared, estCents: i.estCents })),
+      people.map((m) => m.id),
+      input.totalCents,
+      payerId,
+    );
+    return logExpense(ctx, {
+      payerId,
+      cents: input.totalCents,
+      description: `Groceries (${items.length} item${items.length === 1 ? "" : "s"})`,
+      splits,
+      source: "cart",
+    });
   });
-  await db
-    .update(cartItems)
-    .set({ status: "purchased" })
-    .where(inArray(cartItems.id, items.map((i) => i.id)));
-  return expense;
 }

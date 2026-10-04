@@ -28,7 +28,8 @@ async function removeItem(form: FormData) {
   "use server";
   const ctx = await dashboardCtx();
   if (!ctx) return;
-  await cart.removeItem(ctx, { name: String(form.get("name") ?? "") });
+  // By id, not name: the chat tool's fuzzy name match would let one person's "milk" delete another's "oat milk".
+  await cart.removeItemById(ctx, { id: String(form.get("id") ?? "") });
   revalidatePath("/", "layout");
 }
 
@@ -78,7 +79,7 @@ export default async function CartPage() {
                     </div>
                     <span className="num">{i.estCents != null ? dollars(i.estCents) : "—"}</span>
                     <form action={removeItem}>
-                      <input type="hidden" name="name" value={i.name} />
+                      <input type="hidden" name="id" value={i.id} />
                       <button className="btn-danger">Remove</button>
                     </form>
                   </li>
