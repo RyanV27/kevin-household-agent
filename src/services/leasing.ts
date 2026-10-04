@@ -96,3 +96,103 @@ export async function openThread(ctx: Pick<Ctx, "householdId">, threadId: string
   }
   return messages.map((m) => ({ ...m, unread: false }));
 }
+
+// ---- "Kevin, check the work order": a read-only glance at the mailbox. Marks nothing read.
+
+export type LeasingThreadStatus = {
+  threadId: string;
+  subject: string;
+  lastFrom: "kevin" | "office";
+  lastAt: Date;
+  lastPreview: string;
+  unread: boolean;
+  messageCount: number;
+};
+
+const DETAIL_THREADS = 3;
+
+export async function leasingStatus(ctx: Pick<Ctx, "householdId">): Promise<{ threads: LeasingThreadStatus[] }> {
+  const { inbox } = await addresses(ctx.householdId);
+  if (!inbox || !process.env.AGENTMAIL_API_KEY) return { threads: [] };
+  const threads = await mail.listThreads(inbox, 10);
+  const details = await Promise.all(
+    threads.slice(0, DETAIL_THREADS).map(async (t) => {
+      try {
+        const messages = await mail.getThread(inbox, t.threadId);
+        const last = [...messages].sort((a, b) => b.at.getTime() - a.at.getTime())[0];
+        if (!last) return null;
+        return { threadId: t.threadId, lastFrom: last.sent ? ("kevin" as const) : ("office" as const), lastAt: last.at, lastPreview: last.text };
+      } catch (e) {
+        console.error(`leasing: getThread ${t.threadId} failed`, e);
+        return null;
+      }
+    }),
+  );
+  const byId = new Map(details.filter((d): d is NonNullable<typeof d> => !!d).map((d) => [d.threadId, d]));
+  return {
+    threads: threads.map((t) => {
+      const d = byId.get(t.threadId);
+      // Without the detail fetch we guess from the thread: an unread thread was last touched by the office.
+      return {
+        threadId: t.threadId,
+        subject: t.subject,
+        lastFrom: d?.lastFrom ?? (t.unread ? "office" : "kevin"),
+        lastAt: d?.lastAt ?? t.at,
+        lastPreview: gist(d?.lastPreview ?? t.preview),
+        unread: t.unread,
+        messageCount: t.messageCount,
+      };
+    }),
+  };
+}
+
+const gist = (text: string, max = 200) => {
+  const g = text.replace(/\s+/g, " ").trim();
+  return g.length > max ? `${g.slice(0, max)}…` : g;
+};
+
+// ---- Scheduler poll: new mail from the office -> group chat. Marks nothing read (the dashboard badge keeps counting).
+
+type PollState = { lastPolledAt: Map<string, Date>; seenThreadAt: Map<string, number> }; // householdId -> ..., `${householdId}:${threadId}` -> thread.at
+function pollState(): PollState {
+  const g = globalThis as { __kevinMailPollState?: PollState };
+  return (g.__kevinMailPollState ??= { lastPolledAt: new Map(), seenThreadAt: new Map() });
+}
+
+/**
+ * Copies any received message not yet in `emails` into it and returns one summary per NEW message. Only unread threads
+ * are examined, and a thread is only re-fetched when its `at` moved since the last poll, so an idle inbox costs one list call.
+ */
+export async function pollInbox(householdId: string): Promise<{ summary: string; threadId: string }[]> {
+  if (!process.env.AGENTMAIL_API_KEY) return [];
+  const { inbox } = await addresses(householdId);
+  if (!inbox) return [];
+  const s = pollState();
+  const threads = await mail.listThreads(inbox, 25);
+  const out: { summary: string; threadId: string }[] = [];
+  for (const t of threads) {
+    const key = `${householdId}:${t.threadId}`;
+    if (!t.unread) {
+      s.seenThreadAt.set(key, t.at.getTime());
+      continue;
+    }
+    if (s.seenThreadAt.get(key) === t.at.getTime()) continue; // unchanged since we last looked
+    const messages = await mail.getThread(inbox, t.threadId);
+    const stored = await db
+      .select({ createdAt: emails.createdAt, subject: emails.subject, body: emails.body })
+      .from(emails)
+      .where(and(eq(emails.householdId, householdId), eq(emails.threadId, t.threadId), eq(emails.direction, "in")));
+    const seenAt = new Set(stored.map((r) => r.createdAt.getTime()));
+    const seenText = new Set(stored.map((r) => `${r.subject}\n${r.body}`));
+    const fresh = messages
+      .filter((m) => !m.sent && !seenAt.has(m.at.getTime()) && !seenText.has(`${m.subject}\n${m.text}`))
+      .sort((a, b) => a.at.getTime() - b.at.getTime());
+    if (fresh.length) {
+      await db.insert(emails).values(fresh.map((m) => ({ householdId, direction: "in" as const, subject: m.subject, body: m.text, threadId: t.threadId, createdAt: m.at })));
+      for (const m of fresh) out.push({ threadId: t.threadId, summary: `📬 Leasing office replied — ${summarize(m.subject, m.text)}` });
+    }
+    s.seenThreadAt.set(key, t.at.getTime());
+  }
+  s.lastPolledAt.set(householdId, new Date());
+  return out;
+}

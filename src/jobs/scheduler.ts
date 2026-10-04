@@ -1,5 +1,6 @@
 // P4 · Sudhersan. Started once from instrumentation.ts; fine because the Fly Machine never sleeps.
-// Every 60 s: due reminders (Kevin-voiced), the weekly Kevin Report (Sun 18:00 Chicago), and a 9 AM upkeep nudge.
+// Every 60 s: due reminders (Kevin-voiced), the weekly Kevin Report (Sun 18:00 Chicago), a 9 AM upkeep nudge, and a poll of the
+// leasing inbox (new office mail -> group).
 // The tick never rejects: every send is wrapped, and with no TELEGRAM_BOT_TOKEN it skips sending entirely.
 import { isNotNull } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -7,6 +8,7 @@ import { telegram } from "@/channels/telegram";
 import { dueReminders, markSent, type Reminder } from "@/services/reminders";
 import { dueMaintenance } from "@/services/upkeep";
 import { formatKevinReport, kevinReport, localParts, shouldPostUpkeepNudge, shouldPostWeeklyReport } from "@/services/report";
+import { pollInbox } from "@/services/leasing";
 
 const TICK_MS = 60_000;
 const MAX_SEND_ATTEMPTS = 3;
@@ -131,6 +133,24 @@ export async function postUpkeepNudge(householdId: string, now = new Date()): Pr
   return text;
 }
 
+/** Poll the house's AgentMail inbox once and post every new office message to the group. Returns what was posted. */
+export async function pollMailOnce(householdId: string): Promise<{ summary: string; threadId: string }[]> {
+  if (!process.env.AGENTMAIL_API_KEY) return [];
+  const fresh = await pollInbox(householdId);
+  for (const m of fresh) {
+    if (!telegramConfigured()) {
+      warnNotConfigured();
+      break;
+    }
+    try {
+      await telegram.send(householdId, { text: m.summary, buttons: [{ text: "📬 Open inbox", url: `${process.env.APP_URL ?? ""}/inbox?thread=${encodeURIComponent(m.threadId)}` }] });
+    } catch (e) {
+      console.error(`scheduler: mail notification send failed for household ${householdId}`, e);
+    }
+  }
+  return fresh;
+}
+
 async function runHouseholdJobs(now: Date) {
   const s = state();
   let houses: { id: string; name: string }[];
@@ -154,6 +174,11 @@ async function runHouseholdJobs(now: Date) {
       }
     } catch (e) {
       console.error(`scheduler: upkeep nudge failed for ${h.name}`, e);
+    }
+    try {
+      await pollMailOnce(h.id);
+    } catch (e) {
+      console.error(`scheduler: mail poll failed for ${h.name}`, e);
     }
   }
 }

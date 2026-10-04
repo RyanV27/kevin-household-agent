@@ -18,7 +18,8 @@ export function bot(): Bot {
     if (m.voice) {
       const file = await tg.getFile();
       const url = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
-      text = await transcribe(await (await fetch(url)).arrayBuffer());
+      // Telegram voice notes are ogg/opus; pass the mime so transcribe() picks the right input_audio format.
+      text = await transcribe(await (await fetch(url)).arrayBuffer(), { mime: m.voice.mime_type ?? "audio/ogg", filename: file.file_path });
     }
     const msg: IncomingMessage = {
       channel: "telegram",
