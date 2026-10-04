@@ -58,10 +58,10 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   if (!house?.inboxAddress || !house.leasingEmail) {
     return (
       <main>
-        <PageHead title="Inbox" quip="Kevin handles the grown-up stuff." />
+        <PageHead title="Inbox" quip="Merry Christmas, ya filthy animal." />
         <div className="card">
           <Empty title="Kevin needs a mailbox.">
-            Set Kevin&apos;s inbox and the leasing office email in <Link href="/members">Roommates → House settings</Link>.
+            No mailbox, no mail. Set Kevin&apos;s inbox and the leasing office email in <Link href="/members">Roommates → Fort McCallister settings</Link>.
           </Empty>
         </div>
       </main>
@@ -70,13 +70,13 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   return (
     <main>
-      <PageHead title="Inbox" quip="Kevin handles the grown-up stuff.">
+      <PageHead title="Inbox" quip="Merry Christmas, ya filthy animal.">
         <small>{house.inboxAddress} ⇄ {house.leasingEmail}</small>
       </PageHead>
 
       <div className="inbox">
         <section className="card threads">
-          <h2>Threads</h2>
+          <h2>👀 Threads · the mail</h2>
           {threads.length ? (
             <ul className="list">
               {threads.map((t) => (
@@ -93,7 +93,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                 </li>
               ))}
             </ul>
-          ) : <Empty title="No mail yet.">Write to the leasing office and it shows up here.</Empty>}
+          ) : <Empty title="No mail yet.">Write to Old Man Marley (the leasing office) and it shows up here. He&apos;s nicer than he looks.</Empty>}
         </section>
 
         <section className="stack">
@@ -111,23 +111,23 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               <form action={reply} className="stack" style={{ marginTop: 16 }}>
                 <input type="hidden" name="threadId" value={open.threadId} />
                 <input type="hidden" name="subject" value={open.subject.startsWith("Re:") ? open.subject : `Re: ${open.subject}`} />
-                <textarea name="body" rows={3} placeholder="Reply to the leasing office…" aria-label="Reply" required />
+                <textarea name="body" rows={3} placeholder="Reply to Old Man Marley (the leasing office)…" aria-label="Reply" required />
                 <div><button>Send reply</button></div>
               </form>
             </div>
           ) : (
             <>
               <div className="card">
-                <h2>🔧 Work order</h2>
+                <h2>🔧 Tell Old Man Marley · work order</h2>
                 <form action={workOrder} className="stack">
                   <div className="field">
                     <label htmlFor="issue">What&apos;s broken?</label>
-                    <input id="issue" name="issue" placeholder="Kitchen sink is leaking" required />
+                    <input id="issue" name="issue" placeholder="Kitchen sink is leaking, furnace is making the scary noise" required />
                   </div>
                   <div className="form-grid">
                     <div className="field">
                       <label htmlFor="location">Where</label>
-                      <input id="location" name="location" placeholder="kitchen" />
+                      <input id="location" name="location" placeholder="kitchen, basement (the scary one)" />
                     </div>
                     <div className="field">
                       <label htmlFor="urgency">Urgency</label>
@@ -142,17 +142,17 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                 </form>
               </div>
               <div className="card">
-                <h2>✉️ Write to the leasing office</h2>
+                <h2>✉️ Write to the leasing office · be nice, it&apos;s Old Man Marley</h2>
                 <form action={send} className="stack">
                   <div className="field">
                     <label htmlFor="subject">Subject</label>
-                    <input id="subject" name="subject" required />
+                    <input id="subject" name="subject" placeholder="Rent question, the hallway light, a very polite complaint" required />
                   </div>
                   <div className="field">
                     <label htmlFor="body">Message</label>
-                    <textarea id="body" name="body" rows={5} required />
+                    <textarea id="body" name="body" rows={5} placeholder="Kevin sends it from the house inbox and signs for the whole apartment." required />
                   </div>
-                  <div><button>Send</button></div>
+                  <div><button>Send it</button></div>
                 </form>
               </div>
             </>

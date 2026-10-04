@@ -341,7 +341,7 @@ describe("Kevin tools against the dev DB", () => {
     assert.match(r.text, /The Kevin Report/);
     assert.match(r.text, /Ryan pays Sudhersan \$16\.00/, "settle plan from the ledger (1500 + the $1 Sudhersan sent Ryan)");
     assert.match(r.text, /Chores on track/);
-    assert.match(r.text, /Hall of Shame: Ryan/);
+    assert.match(r.text, /Wet Bandits watchlist: Ryan/);
     assert.match(r.text, /Nothing scheduled/);
     assert.match(r.text, /Overdue upkeep: Test smoke alarms/);
     assert.doesNotMatch(r.text, /Replace HVAC filter/);

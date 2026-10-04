@@ -55,7 +55,7 @@ export default async function MembersPage() {
       <PageHead title="Roommates" quip="Hope everyone's accounted for this time." />
       <div className="grid">
         <section className="card">
-          <h2>Who lives here</h2>
+          <h2>🫡 Who lives here · headcount</h2>
           <ul className="list">
             {people.map((m) => (
               <li key={m.id}>
@@ -64,19 +64,20 @@ export default async function MembersPage() {
                   <input name="name" defaultValue={m.name} aria-label="Name" style={{ flex: 1 }} />
                   <span className={`pill ${m.telegramUserId ? "green" : ""}`}>{m.telegramUserId ? "On Telegram" : "Not on Telegram"}</span>
                   <button className="btn-ghost">Save</button>
-                  <button formAction={remove} className="btn-danger">Remove</button>
+                  <button formAction={remove} className="btn-danger" title="I made my family disappear.">Remove</button>
                 </form>
               </li>
             ))}
           </ul>
           <form action={add} className="row" style={{ marginTop: 16 }}>
-            <input name="name" placeholder="New roommate" aria-label="New roommate" required style={{ flex: 1 }} />
+            <input name="name" placeholder="New roommate (not Harry, not Marv)" aria-label="New roommate" required style={{ flex: 1 }} />
             <button>Add</button>
           </form>
+          <small className="muted" style={{ display: "block", marginTop: 10 }}>Remove is the &quot;I made my family disappear 🙈&quot; button. Use it wisely.</small>
         </section>
 
         <section className="card">
-          <h2>House settings</h2>
+          <h2>✨ Fort McCallister settings · house settings</h2>
           <form action={saveSettings} className="stack">
             <div className="field">
               <label htmlFor="name">House name</label>
@@ -93,7 +94,7 @@ export default async function MembersPage() {
               </div>
             </div>
             <div className="field">
-              <label htmlFor="leasingEmail">Leasing office email</label>
+              <label htmlFor="leasingEmail">Leasing office email (Old Man Marley)</label>
               <input id="leasingEmail" name="leasingEmail" type="email" defaultValue={house?.leasingEmail ?? ""} />
             </div>
             <div className="field">
@@ -101,6 +102,7 @@ export default async function MembersPage() {
               <input id="inboxAddress" name="inboxAddress" type="email" defaultValue={house?.inboxAddress ?? ""} />
             </div>
             <div><button>Save settings</button></div>
+            <small className="muted">Set rent and a due day and Kevin yells about rent every month, automatically. KEVIN!!!</small>
           </form>
         </section>
       </div>

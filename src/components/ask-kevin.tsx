@@ -17,8 +17,8 @@ type Saved = { open: boolean; log: Msg[] };
 
 const STORAGE_KEY = "kevin:ask-kevin";
 const MAX_LOG = 50;
-const GREETING = "Nobody cheats Kevin. What do you need?";
-const BUSY = "Kevin's line is busy. Try again in a sec.";
+const GREETING = "Nobody cheats Kevin. What do you need, bestie? 😜";
+const BUSY = "Kevin's line is busy, probably setting a trap. Try again in a sec 🙈";
 
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
@@ -156,7 +156,7 @@ export function AskKevin({ actorName }: { actorName?: string }) {
         aria-expanded={open}
         aria-controls="ask-kevin-panel"
       >
-        🏠 Ask Kevin
+        Ask Kevin 😜
       </button>
 
       {open && (
@@ -172,7 +172,7 @@ export function AskKevin({ actorName }: { actorName?: string }) {
           <header className="ak-head">
             <div>
               <div className="ak-title">Kevin</div>
-              {actorName && <small className="muted">talking as {actorName}</small>}
+              {actorName && <small className="muted">talking as {actorName} · this is my house, I have to defend it</small>}
             </div>
             <button type="button" className="btn-ghost ak-close" onClick={() => setOpen(false)} aria-label="Close">
               ×
@@ -197,7 +197,7 @@ export function AskKevin({ actorName }: { actorName?: string }) {
             ))}
             {busy && (
               <div className="ak-msg kevin">
-                <div className="ak-bubble ak-thinking">Kevin is thinking…</div>
+                <div className="ak-bubble ak-thinking">Kevin is scheming</div>
               </div>
             )}
           </div>
@@ -208,7 +208,7 @@ export function AskKevin({ actorName }: { actorName?: string }) {
               className="ak-input"
               rows={1}
               value={draft}
-              placeholder="Ask Kevin…"
+              placeholder="Ask Kevin anything, ya filthy animal…"
               aria-label="Message Kevin"
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onKey}

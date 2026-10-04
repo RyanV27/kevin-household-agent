@@ -35,12 +35,13 @@ function state(): State {
 /* ---------- Kevin's voice for reminders (pure, deterministic by reminder id) ---------- */
 
 const REMINDER_LINES = [
-  "⏰ {text} — don't make me come over there.",
-  "⏰ Hey {who}: {text}. Kevin's watching.",
-  "⏰ {text}. This is my house, I have to defend it. {who}, you're up.",
-  "⏰ Reminder for {who}: {text}. Nobody cheats Kevin.",
-  "⏰ {text}. Keep the change, ya filthy animal. (Just kidding. Do it, {who}.)",
-];
+  "⏰ {text}. Don't make me come over there, {who} 😤",
+  "⏰ Hey {who}: {text}. Kevin's watching, no cap 👀",
+  "⏰ {text}. This is my house, I have to defend it. {who}, you're up 🫡",
+  "⏰ Reminder for {who}: {text}. Nobody cheats Kevin 😜",
+  "⏰ {text}. Keep the change, ya filthy animal. (Kidding. Do it fr, {who}) ✨",
+  "⏰ {who}, {text}. Say less, I already set the paint cans 🙈",
+]
 
 /** Small stable string hash so the same reminder always gets the same line. */
 export function hashId(s: string): number {
@@ -129,7 +130,7 @@ export async function postWeeklyReport(householdId: string, houseName?: string):
 export async function postUpkeepNudge(householdId: string, now = new Date()): Promise<string | null> {
   const overdue = (await dueMaintenance({ householdId })).filter((m) => m.status === "overdue");
   if (overdue.length === 0) return null;
-  const text = `🔧 Overdue: ${overdue.map((m) => m.item).join(", ")}. Somebody adult today.`;
+  const text = `🔧 Overdue: ${overdue.map((m) => m.item).join(", ")}. Somebody adult today, bestie. Even Kevin did the laundry 🧦`;
   if (await safeSend(householdId, text, "upkeep nudge")) state().upkeepPostedDay.set(householdId, localParts(now).day);
   return text;
 }

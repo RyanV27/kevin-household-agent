@@ -56,19 +56,19 @@ export default async function CartPage() {
     <main>
       <PageHead title="Grocery cart" quip="I'm eating junk and watching rubbish.">
         {all.length > 0 && (
-          <Link href="/cart/checkout" className="btn">Checkout</Link>
+          <Link href="/cart/checkout" className="btn">Checkout at Kevin&apos;s Market</Link>
         )}
       </PageHead>
       <div className="grid">
         {all.length === 0 ? (
           <section className="card">
-            <Empty title="The cart is empty.">Say &apos;Kevin, add milk&apos; or add something here.</Empty>
+            <Empty title="The cart is empty. Not even a cheese pizza.">Say &apos;Kevin, add milk&apos; or add something here.</Empty>
           </section>
         ) : (
           groupNames.map((group) => (
             <section className="card" key={group}>
               <h2>
-                {group === "Shared" ? "Shared" : `${group}'s items`}
+                {group === "Shared" ? "🍕 Shared junk (whole house)" : `🛒 ${group}'s junk`}
                 <span className="pill">{groups[group].length}</span>
               </h2>
               <ul className="list">
@@ -94,12 +94,12 @@ export default async function CartPage() {
         )}
 
         <section className="card">
-          <h2>Add to cart</h2>
+          <h2>🛒 Add to cart · fill &apos;er up</h2>
           <form action={addItem} className="stack">
             <div className="form-grid">
               <div className="field">
                 <label htmlFor="name">Item</label>
-                <input id="name" name="name" placeholder="chips, milk, toilet paper" required />
+                <input id="name" name="name" placeholder="cheese pizza, just for me 🍕" required />
               </div>
               <div className="field">
                 <label htmlFor="qty">Qty</label>
@@ -114,12 +114,12 @@ export default async function CartPage() {
               <span className="spacer" />
               <button>Add</button>
             </div>
-            <small className="muted">Prices are estimates from Kevin&apos;s catalog. Items are added as the person you&apos;re acting as.</small>
+            <small className="muted">Prices are estimates from Kevin&apos;s catalog (he asked the guy at Little Nero&apos;s). Items are added as the person you&apos;re acting as.</small>
           </form>
         </section>
 
         <section className="card">
-          <h2>Summary</h2>
+          <h2>✨ Summary · the damage</h2>
           <ul className="list">
             <li>
               <span>Items</span>
@@ -135,10 +135,10 @@ export default async function CartPage() {
           {all.length > 0 ? (
             <div className="stack" style={{ marginTop: 16 }}>
               <div>
-                <Link href="/cart/checkout" className="btn">Checkout</Link>
+                <Link href="/cart/checkout" className="btn">Checkout at Kevin&apos;s Market</Link>
               </div>
               <form action={markPurchased} className="stack">
-                <label>Already bought it? Mark purchased</label>
+                <label>Somebody actually went to the store? Legend. Mark it purchased:</label>
                 <div className="form-grid">
                   <div className="field">
                     <label htmlFor="total">Receipt total ($)</label>
@@ -155,12 +155,12 @@ export default async function CartPage() {
                 </div>
                 <div className="row">
                   <button className="btn-ghost">Mark purchased</button>
-                  <small className="muted">Logs one expense: everyone pays for their own items, shared items split evenly.</small>
+                  <small className="muted">Logs one expense: everyone pays for their own junk, shared items split evenly. Nobody cheats Kevin.</small>
                 </div>
               </form>
             </div>
           ) : (
-            <p className="muted" style={{ marginTop: 12 }}>Checkout and Mark purchased appear once something is in the cart.</p>
+            <p className="muted" style={{ marginTop: 12 }}>Checkout and Mark purchased appear once something is in the cart. Even one cheese pizza counts.</p>
           )}
         </section>
       </div>

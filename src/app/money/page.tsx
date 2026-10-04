@@ -60,7 +60,7 @@ export default async function MoneyPage() {
       <PageHead title="Money" quip="Keep the change, ya filthy animal." />
       <div className="grid">
         <section className="card">
-          <h2>Balances</h2>
+          <h2>💸 Balances · who&apos;s a filthy animal</h2>
           {balances.length ? (
             <ul className="list">
               {balances.map((b) => (
@@ -78,12 +78,12 @@ export default async function MoneyPage() {
               ))}
             </ul>
           ) : (
-            <Empty title="Nobody's here.">Add roommates first, then start splitting.</Empty>
+            <Empty title="Nobody's here.">Add roommates first, then start splitting. You can&apos;t split a cheese pizza with nobody.</Empty>
           )}
         </section>
 
         <section className="card">
-          <h2>Who pays whom</h2>
+          <h2>🫡 Who pays whom · Wet Bandits, settle up</h2>
           {plan.length ? (
             <ul className="list">
               {plan.map((t, i) => (
@@ -97,17 +97,17 @@ export default async function MoneyPage() {
                     <input type="hidden" name="fromId" value={t.fromId} />
                     <input type="hidden" name="toId" value={t.toId} />
                     <input type="hidden" name="cents" value={t.cents} />
-                    <button className="btn-ghost">Mark paid</button>
+                    <button className="btn-ghost" title="Keep the change, ya filthy animal.">Mark paid</button>
                   </form>
                 </li>
               ))}
             </ul>
           ) : (
-            <Empty title="All square.">Nobody owes anybody. Keep it that way.</Empty>
+            <Empty title="All square. No filthy animals today.">Nobody owes anybody. Keep it that way, ya filthy animals.</Empty>
           )}
           {others.length > 0 && (
             <form action={settle} className="row" style={{ marginTop: 16 }}>
-              <span className="muted">Settle up:</span>
+              <span className="muted">Settle up (keep the change):</span>
               <span>I paid</span>
               <select name="toId" aria-label="Paid to" required>
                 {others.map((m) => (
@@ -115,13 +115,13 @@ export default async function MoneyPage() {
                 ))}
               </select>
               <input name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" aria-label="Amount" required style={{ width: 100 }} />
-              <button className="btn-ghost">Record</button>
+              <button className="btn-ghost">Record it</button>
             </form>
           )}
         </section>
 
         <section className="card">
-          <h2>Add expense</h2>
+          <h2>🍕 Add expense · who paid for the Plaza Hotel room service?</h2>
           <form action={addExpense} className="stack">
             <div className="form-grid">
               <div className="field">
@@ -139,7 +139,7 @@ export default async function MoneyPage() {
             </div>
             <div className="field">
               <label htmlFor="description">What for</label>
-              <input id="description" name="description" placeholder="Groceries, pizza, the window Buzz broke" required />
+              <input id="description" name="description" placeholder="Room service, cheese pizza, the window Buzz broke" required />
             </div>
             <div className="field">
               <label>Split among</label>
@@ -153,11 +153,12 @@ export default async function MoneyPage() {
               </div>
             </div>
             <div><button>Add expense</button></div>
+            <small className="muted">Kevin does the math so nobody has to. Nobody cheats Kevin.</small>
           </form>
         </section>
 
         <section className="card">
-          <h2>Recent expenses</h2>
+          <h2>👀 The receipts · recent expenses</h2>
           {recent.length ? (
             <table className="table">
               <thead>
@@ -180,7 +181,7 @@ export default async function MoneyPage() {
               </tbody>
             </table>
           ) : (
-            <Empty title="Nothing logged yet.">The first pizza is on somebody.</Empty>
+            <Empty title="Nothing logged yet.">The first cheese pizza is on somebody. Just for me.</Empty>
           )}
         </section>
       </div>
