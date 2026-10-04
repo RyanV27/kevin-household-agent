@@ -41,30 +41,37 @@ const full: KevinReport = {
   ],
 };
 
-test("formatKevinReport: empty house -> All square, quiet lines, no shame/upkeep", () => {
+test("formatKevinReport: empty house -> All square, quiet lines, no watchlist/upkeep", () => {
   const out = formatKevinReport(empty);
   assert.equal(
     out,
-    ["🏠 The Kevin Report", "💸 All square. Keep it that way.", "🧹 No chores on the chart. Suspicious.", "⏰ Nothing scheduled. Enjoy the quiet."].join("\n"),
+    [
+      "📣 The Kevin Report",
+      "💸 All square. Keep it that way, ya filthy animals.",
+      "🧹 No chores on the chart. Suspicious. It's giving Wet Bandits.",
+      "⏰ Nothing scheduled. Enjoy the quiet. Order a Little Nero's 🍕",
+    ].join("\n"),
   );
-  assert.ok(!out.includes("Hall of Shame"));
+  assert.ok(!out.includes("Wet Bandits watchlist"));
   assert.ok(!out.includes("🔧"));
+  assert.ok(!out.includes("🏠"));
 });
 
 test("formatKevinReport: full house renders every section, deterministically, within 12 lines", () => {
   const out = formatKevinReport(full, { houseName: "Apt 4B", tz: "America/Chicago" });
   const lines = out.split("\n");
-  assert.equal(lines[0], "🏠 The Kevin Report — Apt 4B");
+  assert.equal(lines[0], "📣 The Kevin Report — Apt 4B");
   assert.ok(lines.includes("💸 Ryan pays Sudhersan $12.50"));
   assert.ok(lines.includes("🧹 Overdue: Dishes (Ryan's turn), Take out trash"));
-  assert.ok(lines.includes("🚨 Hall of Shame: Ryan has never logged a chore. Bold strategy."));
+  assert.ok(lines.includes("🚨 Wet Bandits watchlist: Ryan has never logged a chore. Bold strategy, Wet Bandit 😤"));
   assert.ok(lines.includes("⏰ Sat Oct 10: Rent due"));
   assert.ok(lines.includes("⏰ Mon Oct 12: Buy filters (Ryan)"));
   assert.ok(lines.includes("⏰ Wed Oct 14: Call landlord"));
   assert.ok(!out.includes("Fourth thing"), "only the next 3 reminders");
-  assert.ok(lines.includes("🔧 Overdue upkeep: Replace HVAC filter, Test smoke alarms. Somebody adult today."));
+  assert.ok(lines.includes("🔧 Overdue upkeep: Replace HVAC filter, Test smoke alarms. Somebody adult today, bestie 🧦"));
   assert.ok(!out.includes("dryer vent"), "due-soon upkeep is not nagged about");
   assert.ok(lines.length <= 12, `too long: ${lines.length} lines`);
+  assert.ok(!out.includes("🏠"), "no house emoji");
   assert.equal(out, formatKevinReport(full, { houseName: "Apt 4B", tz: "America/Chicago" }), "deterministic");
 });
 
@@ -76,7 +83,7 @@ test("formatKevinReport: chores on track and everyone pulling weight -> no Hall 
   };
   const out = formatKevinReport(r);
   assert.ok(out.includes("🧹 Chores on track."));
-  assert.ok(!out.includes("Hall of Shame"));
+  assert.ok(!out.includes("Wet Bandits watchlist"));
 });
 
 test("formatKevinReport: settle plan is capped at 3 lines with a count", () => {
@@ -132,7 +139,7 @@ test("shouldPostUpkeepNudge: 09:xx local, once per local day", () => {
   assert.equal(shouldPostUpkeepNudge(new Date("2026-07-12T15:15:00Z"), null), false); // 10:15
 });
 
-test("formatKevinReport: two slackers are both named, jab aimed at the worst", () => {
+test("formatKevinReport: two slackers are both named on the watchlist, jab aimed at the worst", () => {
   const r: KevinReport = {
     ...empty,
     chores: [full.chores[0]],
@@ -142,5 +149,5 @@ test("formatKevinReport: two slackers are both named, jab aimed at the worst", (
       { memberId: "a", name: "Sudhersan", daysSinceLastChore: 0, choresThisWeek: 3 },
     ],
   };
-  assert.ok(formatKevinReport(r).includes("🚨 Hall of Shame: Ryan and Alex. Ryan 9 days since a chore. Nobody cheats Kevin."));
+  assert.ok(formatKevinReport(r).includes("🚨 Wet Bandits watchlist: Ryan and Alex. Ryan 9 days since a chore. Nobody cheats Kevin 👀"));
 });
