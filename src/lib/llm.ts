@@ -8,4 +8,4 @@ export const gateway = createOpenAI({
 });
 
 // .chat() = Chat Completions API, which gateways support (the default Responses API often isn't).
-export const model = gateway.chat(process.env.LLM_MODEL ?? "claude-sonnet-5-5");
+export const model = gateway.chat(process.env.LLM_MODEL ?? "claude-sonnet-5");
